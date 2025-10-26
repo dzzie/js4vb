@@ -21,7 +21,13 @@ have fun
 author (well conductor): David Zimmer <dzzie@yahoo.com> + claude.ai
 site:  http://sandsprite.com
 
+Contributors: yokesee - Date handling
+
 Its big and lots of stuff was added as I scaffolded my way up, so there will be bugs hiding!
+
+![Debugger Screenshot](https://raw.githubusercontent.com/dzzie/jsvb_pub/refs/heads/master/debugger.png)
+*VB6 JavaScript Interpreter with Scintilla-based debugger*
+
 ---
 
 # js4vb - JavaScript Engine for VB6

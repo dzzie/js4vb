@@ -73,14 +73,14 @@ Public Event ConsoleLog(ByVal msg As String)
 Const debug_mode As Boolean = False
 
 ' FOR TESTING ONLY - Setup minimal debug state
-Friend Sub TestSetupDebugState(code As String, currentLine As Long)
-    m_sourceCode = code
+Friend Sub TestSetupDebugState(Code As String, currentLine As Long)
+    m_sourceCode = Code
     m_currentLine = currentLine
     m_debugMode = True
     m_debugPaused = True
     
     ' Parse code
-    Set m_programAST = m_parser.ParseScript(code)
+    Set m_programAST = m_parser.ParseScript(Code)
 End Sub
 
 Property Get GlobalScope() As CScope
@@ -375,22 +375,22 @@ Private Sub DebugPopFrame()
     End If
 End Sub
 
-Public Sub AddCode(code As String)
+Public Sub AddCode(Code As String)
     On Error GoTo ErrorHandler
     
     ' Skip empty code
-    If Len(Trim$(code)) = 0 Then Exit Sub
+    If Len(Trim$(Code)) = 0 Then Exit Sub
     
     ' Parse and execute just the new code
     Dim ast As CNode
-    Set ast = m_parser.ParseScript(code)
+    Set ast = m_parser.ParseScript(Code)
     ExecuteProgram ast
     
     ' Remember we executed this
     If Len(m_executedCode) > 0 Then
         m_executedCode = m_executedCode & vbCrLf
     End If
-    m_executedCode = m_executedCode & code
+    m_executedCode = m_executedCode & Code
     
     ' Raise completion event if debugging
     If m_debugMode Then
@@ -432,14 +432,14 @@ Public Sub ClearContext()
 End Sub
 
 ' Evaluate expression in CURRENT context (no re-parsing old code)
-Public Function Eval(code As String) As CValue
+Public Function Eval(Code As String) As CValue
     On Error GoTo ErrorHandler
     
     Dim ast As CNode
     Dim result As CValue
     
     ' Parse ONLY the new code
-    Set ast = m_parser.ParseScript(code)
+    Set ast = m_parser.ParseScript(Code)
     
     ' Should be a single expression statement
     If ast.Body.count > 0 Then
@@ -518,11 +518,11 @@ Private Function ExtractColumnFromError(errDescription As String) As Long
 End Function
 
 ' Execute statement(s) in current context
-Public Sub EvalStatement(code As String)
+Public Sub EvalStatement(Code As String)
     On Error GoTo ErrorHandler
     
     Dim ast As CNode
-    Set ast = m_parser.ParseScript(code)
+    Set ast = m_parser.ParseScript(Code)
     
     ' Execute in the EXISTING context
     ExecuteProgram ast
@@ -544,26 +544,26 @@ ErrorHandler:
 End Sub
 
 ' Get a JavaScript variable from VB6
-Public Function GetVariable(Name As String) As CValue
-    Set GetVariable = m_globalScope.GetVar(Name)
+Public Function GetVariable(name As String) As CValue
+    Set GetVariable = m_globalScope.GetVar(name)
 End Function
 
 ' Set a JavaScript variable from VB6
-Public Sub SetVariable(Name As String, Value As Variant)
+Public Sub SetVariable(name As String, Value As Variant)
     Dim val As New CValue
     Set val = VariantToCValue(Value)
-    m_globalScope.DefineVar Name, val
+    m_globalScope.DefineVar name, val
 End Sub
 
 ' Check if a JavaScript variable exists
-Public Function HasVariable(Name As String) As Boolean
-    HasVariable = m_globalScope.HasVar(Name)
+Public Function HasVariable(name As String) As Boolean
+    HasVariable = m_globalScope.HasVar(name)
 End Function
 
 ' BONUS: Get variable as VB6 Variant (convenience method)
-Public Function GetVariableAsVariant(Name As String) As Variant
+Public Function GetVariableAsVariant(name As String) As Variant
     Dim val As CValue
-    Set val = m_globalScope.GetVar(Name)
+    Set val = m_globalScope.GetVar(name)
     GetVariableAsVariant = CValueToVariant(val)
 End Function
 
@@ -633,42 +633,42 @@ Private Sub AddBuiltins()
 End Sub
 
 ' Public API: Let host add COM objects
-Public Sub AddCOMObject(Name As String, obj As Object)
+Public Sub AddCOMObject(name As String, obj As Object)
     ' Create a CValue wrapper for the COM object
     Dim val As New CValue
     val.vType = vtCOMObject
     Set val.objVal = obj
     
     ' Define in global scope
-    m_globalScope.DefineVar Name, val
+    m_globalScope.DefineVar name, val
     
     ' Also track in collection for enumeration
     On Error Resume Next
-    m_comObjects.Remove Name
+    m_comObjects.Remove name
     On Error GoTo 0
-    m_comObjects.add obj, Name
+    m_comObjects.add obj, name
 End Sub
 
 ' Public API: Remove a COM object
-Public Sub RemoveCOMObject(Name As String)
+Public Sub RemoveCOMObject(name As String)
     ' Remove from global scope
     Dim undef As New CValue
     undef.vType = vtUndefined
-    m_currentScope.SetVar Name, undef
+    m_currentScope.SetVar name, undef
     
     ' Remove from tracking
     On Error Resume Next
-    m_comObjects.Remove Name
+    m_comObjects.Remove name
     On Error GoTo 0
 End Sub
 
 ' Main entry point
-Public Sub Execute(code As String, Optional withDebugger As Boolean = False)
+Public Sub Execute(Code As String, Optional withDebugger As Boolean = False)
     On Error GoTo ErrorHandler
     
     ' Parse the code
     Dim ast As CNode
-    Set ast = m_parser.ParseScript(code)
+    Set ast = m_parser.ParseScript(Code)
     
     If withDebugger Then
         Set m_programAST = ast
@@ -852,11 +852,11 @@ End Sub
 ' Execute function declaration
 Private Sub ExecuteFunctionDeclaration(Node As CNode)
     Dim funcName As String
-    funcName = Node.id.Name
+    funcName = Node.id.name
     
     ' Create function object
     Dim func As New CFunction
-    func.Name = funcName
+    func.name = funcName
     Set func.params = Node.params
     Set func.Body = Node.FunctionBody
     Set func.closure = m_currentScope  ' Capture current scope
@@ -964,9 +964,9 @@ Private Function EvaluateFunctionExpression(Node As CNode) As CValue
     Dim func As New CFunction
     
     If Not Node.id Is Nothing Then
-        func.Name = Node.id.Name
+        func.name = Node.id.name
     Else
-        func.Name = "<anonymous>"
+        func.name = "<anonymous>"
     End If
     
     Set func.params = Node.params
@@ -1069,7 +1069,7 @@ Private Sub ExecuteVarDeclaration(Node As CNode)
         
         ' Get variable name
         Dim varName As String
-        varName = decl.VarID.Name
+        varName = decl.VarID.name
         
         If debug_mode Then Debug.Print ">>> Declaring var: " & varName  ' <-- ADD THIS
         
@@ -1280,7 +1280,7 @@ Private Function EvaluateUpdate(Node As CNode) As CValue
     End If
     
     Dim varName As String
-    varName = Node.Argument.Name
+    varName = Node.Argument.name
     
     Dim oldValue As CValue
     Set oldValue = m_currentScope.GetVar(varName)
@@ -1401,7 +1401,7 @@ End Function
 
 ' Evaluate identifier (variable lookup)
 Private Function EvaluateIdentifier(Node As CNode) As CValue
-    Set EvaluateIdentifier = m_currentScope.GetVar(Node.Name)
+    Set EvaluateIdentifier = m_currentScope.GetVar(Node.name)
 End Function
 
       
@@ -1546,7 +1546,7 @@ Private Function EvaluateAssignment(Node As CNode) As CValue
     
     ' Simple case: identifier = value
     If Node.Left.tType = Identifier_Node Then
-        m_currentScope.SetVar Node.Left.Name, Value
+        m_currentScope.SetVar Node.Left.name, Value
     ElseIf Node.Left.tType = MemberExpression_Node Then
         ' Member assignment: obj.prop = value or arr[0] = value
         AssignMember Node.Left, Value
@@ -1593,7 +1593,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
     ' === NEW: Check for global functions (no 'this') ===
     If Node.Callee.tType = Identifier_Node Then
         Dim funcName As String
-        funcName = Node.Callee.Name
+        funcName = Node.Callee.name
         
         If IsGlobalFunction(funcName) Then
             ' Evaluate arguments
@@ -1617,16 +1617,16 @@ Private Function EvaluateCall(Node As CNode) As CValue
         
         If Node.Callee.Object.tType = Identifier_Node Then
 
-            If Node.Callee.Object.Name = "console" Then
-                If Node.Callee.prop.Name = "log" Then
+            If Node.Callee.Object.name = "console" Then
+                If Node.Callee.prop.name = "log" Then
                     Set result = HandleConsoleLog(Node.Arguments)  'collection of CNodes still need to evalexpression
                     depth = depth - 1
                     Set EvaluateCall = result
                     Exit Function
                 End If
-            ElseIf Node.Callee.Object.Name = "Math" Then
+            ElseIf Node.Callee.Object.name = "Math" Then
                 ' Math method call
-                methodName = Node.Callee.prop.Name
+                methodName = Node.Callee.prop.name
                 
                 If IsMathMethod(methodName) Then
                     ' Evaluate arguments
@@ -1641,9 +1641,9 @@ Private Function EvaluateCall(Node As CNode) As CValue
                     Set EvaluateCall = result
                     Exit Function
                 End If
-            ElseIf Node.Callee.Object.Name = "JSON" Then
+            ElseIf Node.Callee.Object.name = "JSON" Then
                 ' === JSON method call ===
-                methodName = Node.Callee.prop.Name
+                methodName = Node.Callee.prop.name
                 
                 If IsJSONMethod(methodName) Then
                     ' Evaluate arguments
@@ -1654,6 +1654,17 @@ Private Function EvaluateCall(Node As CNode) As CValue
                     
                     ' Call JSON method
                     Set result = CallJSONMethod(methodName, argValues)
+                    depth = depth - 1
+                    Set EvaluateCall = result
+                    Exit Function
+                End If
+            ElseIf Node.Callee.Object.name = "Date" Then
+                ' === Date static methods ===
+                methodName = Node.Callee.prop.name
+                
+                If methodName = "now" Then
+                    result.vType = vtNumber
+                    result.numVal = DateDiff("s", #1/1/1970#, Now) * 1000
                     depth = depth - 1
                     Set EvaluateCall = result
                     Exit Function
@@ -1676,7 +1687,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
         
         ' === Check if it's an array method call ===
         If objVal.vType = vtArray Then
-            methodName = Node.Callee.prop.Name
+            methodName = Node.Callee.prop.name
             
             If IsArrayMethod(methodName) Then
                 ' Evaluate arguments
@@ -1695,7 +1706,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
         
         ' === Check if it's a string method call ===
         If objVal.vType = vtString Then
-            methodName = Node.Callee.prop.Name
+            methodName = Node.Callee.prop.name
             
             If IsStringMethod(methodName) Then
                 ' Evaluate arguments
@@ -1712,10 +1723,28 @@ Private Function EvaluateCall(Node As CNode) As CValue
             End If
         End If
         
+        If objVal.vType = vtObject Then
+            methodName = Node.Callee.prop.name
+
+            If IsDateMethod(methodName) Then
+                ' Evaluate arguments
+                For i = 1 To Node.Arguments.count
+                    Set arg = Node.Arguments(i)
+                    argValues.add EvaluateExpression(arg)
+                Next
+                
+                ' Call Date method
+                Set result = CallDateMethod(objVal, methodName, argValues)
+                depth = depth - 1
+                Set EvaluateCall = result
+                Exit Function
+            End If
+        End If
+        
         ' === Check if it's a COM method call ===
         ' (objVal already evaluated above - reuse it!)
         If objVal.vType = vtCOMObject Then
-            methodName = Node.Callee.prop.Name
+            methodName = Node.Callee.prop.name
             
             Set result = CallCOMMethod(objVal.objVal, methodName, Node.Arguments)
             depth = depth - 1  ' ? ADD THIS
@@ -1725,7 +1754,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
         
         ' === User-defined object methods (.THIS SUPPORT IS THE KEY!) ===
         If objVal.vType = vtObject Then
-            methodName = Node.Callee.prop.Name
+            methodName = Node.Callee.prop.name
             If dbg_mode Then Debug.Print ">>> Looking for method '" & methodName & "' on object"
             
             ' Get the method from the object
@@ -1829,7 +1858,7 @@ Private Function EvaluateMember(Node As CNode) As CValue
         End If
     Else
         ' Static: obj.prop
-        propName = Node.prop.Name
+        propName = Node.prop.name
     End If
     
     ' === NEW: Handle COM objects ===
@@ -2158,7 +2187,7 @@ Private Function EvaluateObjectExpression(Node As CNode) As CValue
         ' Get property key
         Dim key As String
         If prop.PropKey.tType = Identifier_Node Then
-            key = prop.PropKey.Name
+            key = prop.PropKey.name
         ElseIf prop.PropKey.tType = Literal_Node Then
             key = CStr(prop.PropKey.Value)
         Else
@@ -2210,7 +2239,7 @@ Private Sub AssignMember(memberNode As CNode, Value As CValue)
         End If
     Else
         ' Static: obj.prop
-        propName = memberNode.prop.Name
+        propName = memberNode.prop.name
     End If
     
     ' === NEW: Handle COM objects ===
@@ -2757,9 +2786,13 @@ Private Function EvaluateNewExpression(Node As CNode) As CValue
 
     ' Check if it's new Error()
     If Node.Callee.tType = Identifier_Node Then
-        If Node.Callee.Name = "Error" Then
+        
+        If Node.Callee.name = "Date" Then
+            Set result = CreateDateObject(Node.Arguments)
+            Set EvaluateNewExpression = result
+            Exit Function
+        ElseIf Node.Callee.name = "Error" Then
             ' new Error([message])
-            
             message = "Error"
             
             If Node.Arguments.count > 0 Then
@@ -2777,7 +2810,7 @@ Private Function EvaluateNewExpression(Node As CNode) As CValue
     
     ' Check if it's new ActiveXObject()
     If Node.Callee.tType = Identifier_Node Then
-        If Node.Callee.Name = "ActiveXObject" Then
+        If Node.Callee.name = "ActiveXObject" Then
             ' Check safety
             If UseSafeSubset Then
                 Err.Raise vbObjectError + 1012, "CInterpreter", _
@@ -2835,7 +2868,7 @@ End Function
 
 Sub TestActiveXObject()
     Dim interp As New CInterpreter
-    Dim code As String
+    Dim Code As String
     
     Debug.Print "=== Testing new ActiveXObject (Unsafe Mode) ==="
     Debug.Print ""
@@ -2843,10 +2876,10 @@ Sub TestActiveXObject()
     ' Test 1: Safe mode blocks it
     Debug.Print "Test 1: Safe mode (should fail)"
     interp.UseSafeSubset = True
-    code = "var fso = new ActiveXObject('Scripting.FileSystemObject');"
+    Code = "var fso = new ActiveXObject('Scripting.FileSystemObject');"
     
     On Error Resume Next
-    interp.Execute code
+    interp.Execute Code
     If Err.Number <> 0 Then
         Debug.Print "Expected: Error (safe mode)"
         Debug.Print "Got: " & Err.Description
@@ -2862,10 +2895,10 @@ Sub TestActiveXObject()
     interp.UseSafeSubset = False
     interp.ClearOutput
     
-    code = "var fso = new ActiveXObject('Scripting.FileSystemObject');" & vbCrLf & _
+    Code = "var fso = new ActiveXObject('Scripting.FileSystemObject');" & vbCrLf & _
            "var tempFolder = fso.GetSpecialFolder(2);" & vbCrLf & _
            "console.log(tempFolder.Path);"
-    interp.Execute code
+    interp.Execute Code
     Debug.Print "Expected: (Temp path)"
     Debug.Print "Got: " & Trim$(interp.GetOutput())
     interp.ClearOutput
@@ -2873,10 +2906,10 @@ Sub TestActiveXObject()
     
     ' Test 3: WScript.Shell
     Debug.Print "Test 3: Unsafe mode - WScript.Shell"
-    code = "var shell = new ActiveXObject('WScript.Shell');" & vbCrLf & _
+    Code = "var shell = new ActiveXObject('WScript.Shell');" & vbCrLf & _
            "var env = shell.Environment('Process');" & vbCrLf & _
            "console.log(env.Item('COMPUTERNAME'));"
-    interp.Execute code
+    interp.Execute Code
     Debug.Print "Expected: (Computer name)"
     Debug.Print "Got: " & Trim$(interp.GetOutput())
     interp.ClearOutput
@@ -2884,9 +2917,9 @@ Sub TestActiveXObject()
     
     ' Test 4: ADODB.Connection (if you dare!)
     Debug.Print "Test 4: Unsafe mode - ADODB.Connection"
-    code = "var conn = new ActiveXObject('ADODB.Connection');" & vbCrLf & _
+    Code = "var conn = new ActiveXObject('ADODB.Connection');" & vbCrLf & _
            "console.log(typeof conn);"
-    interp.Execute code
+    interp.Execute Code
     Debug.Print "Expected: object"
     Debug.Print "Got: " & Trim$(interp.GetOutput())
     interp.ClearOutput
@@ -2894,10 +2927,10 @@ Sub TestActiveXObject()
     
     ' Test 5: Invalid ProgID
     Debug.Print "Test 5: Invalid ProgID (should fail)"
-    code = "var bad = new ActiveXObject('This.Does.Not.Exist');"
+    Code = "var bad = new ActiveXObject('This.Does.Not.Exist');"
     
     On Error Resume Next
-    interp.Execute code
+    interp.Execute Code
     If Err.Number <> 0 Then
         Debug.Print "Expected: Error (invalid ProgID)"
         Debug.Print "Got: " & Err.Description
@@ -2910,10 +2943,10 @@ Sub TestActiveXObject()
     
     ' Test 6: Missing argument
     Debug.Print "Test 6: Missing argument (should fail)"
-    code = "var bad = new ActiveXObject();"
+    Code = "var bad = new ActiveXObject();"
     
     On Error Resume Next
-    interp.Execute code
+    interp.Execute Code
     If Err.Number <> 0 Then
         Debug.Print "Expected: Error (missing argument)"
         Debug.Print "Got: " & Err.Description
@@ -3644,7 +3677,7 @@ Private Function IsGlobalFunction(funcName As String) As Boolean
         Case "parseInt", "parseFloat", "isNaN", "isFinite", "isInteger", _
              "encodeURIComponent", "decodeURIComponent", "encodeURI", "decodeURI", _
              "escape", "unescape", "eval", "print", "alert", "prompt", "format", _
-             "printf", "hex", "Number", "String"
+             "printf", "hex", "Number", "String", "Date"
             IsGlobalFunction = True
         Case Else
             IsGlobalFunction = False
@@ -3659,6 +3692,11 @@ Private Function CallGlobalFunction(funcName As String, args As Collection) As C
     Dim radix As Long
     
     Select Case funcName
+        
+        Case "Date"
+            ' Date() as a function returns string (current date)
+            result.vType = vtString
+            result.strVal = Format$(Now, "ddd mmm dd yyyy hh:nn:ss")
     
         Case "hex"
             result.vType = vtString
@@ -4153,7 +4191,7 @@ Private Sub ExecuteTryStatement(Node As CNode)
         errorValue.objectKeys.add "name", "name"
         
         ' Define error in catch scope
-        catchScope.DefineVar Node.TryHandler.param.Name, errorValue
+        catchScope.DefineVar Node.TryHandler.param.name, errorValue
         
         ' Switch to catch scope
         Dim savedScope As CScope
@@ -4867,7 +4905,7 @@ Public Function CallJSFunction(func As CValue, args As Collection, Optional this
             If i <= fn.params.count Then
                 Dim paramNode As CNode
                 Set paramNode = fn.params(i)
-                funcScope.DefineVar paramNode.Name, args(i)
+                funcScope.DefineVar paramNode.name, args(i)
             End If
         Next
     End If
@@ -4891,7 +4929,7 @@ Public Function CallJSFunction(func As CValue, args As Collection, Optional this
     
     ' *** ADD DEBUGGER HOOK - Push frame AFTER scope switch ***
     If m_debugMode Then
-        DebugPushFrame fn.Name, args.count
+        DebugPushFrame fn.name, args.count
     End If
     
     ' Execute function body
@@ -4940,7 +4978,7 @@ ErrorHandler:
 End Function
 
 ' Evaluate JavaScript and return as VB COM object (if it's a JS object)
-Public Function EvalAsObject(code As String) As Object
+Public Function EvalAsObject(Code As String) As Object
     On Error GoTo ErrorHandler
     
     Const dbg_mode As Boolean = False
@@ -4952,7 +4990,7 @@ Public Function EvalAsObject(code As String) As Object
     
     ' Evaluate the expression
     Dim result As CValue
-    Set result = Eval(code)
+    Set result = Eval(Code)
     
     If result Is Nothing Then
         Set EvalAsObject = Nothing
@@ -4969,9 +5007,9 @@ Public Function EvalAsObject(code As String) As Object
         
         ' Use variable name for objects, direct reference for functions
         If result.vType = vtObject Then
-            jsObj.InitFromVarName code, Me
+            jsObj.InitFromVarName Code, Me
         Else
-            jsObj.InitFromCValue result, Me, code
+            jsObj.InitFromCValue result, Me, Code
         End If
         
         ' Wrap in dynproxy
@@ -5238,3 +5276,189 @@ Private Function DoubleToSignedLong(ByVal dblVal As Double) As Long
         DoubleToSignedLong = CLng(dblVal)
     End If
 End Function
+
+' ? ADD new Function CreateDateObject
+Private Function CreateDateObject(args As Collection) As CValue
+    Dim result As New CValue
+    result.vType = vtObject
+    Set result.objectProps = New Collection
+    Set result.objectKeys = New Collection
+    
+    Dim dateVal As Date
+    
+    ' Determinar la fecha según argumentos
+    If args.count = 0 Then
+        ' new Date() - fecha actual
+        dateVal = Now
+    ElseIf args.count = 1 Then
+        ' new Date(milliseconds) o new Date(dateString)
+        Dim arg As CNode
+        Set arg = args(1)
+        Dim argVal As CValue
+        Set argVal = EvaluateExpression(arg)
+        
+        If argVal.vType = vtNumber Then
+            ' Milliseconds desde epoch (simplificado)
+            dateVal = DateAdd("s", argVal.numVal / 1000, #1/1/1970#)
+        ElseIf argVal.vType = vtString Then
+            ' Parse date string
+            On Error Resume Next
+            dateVal = CDate(argVal.strVal)
+            If Err.Number <> 0 Then
+                dateVal = Now  ' Fallback
+            End If
+            On Error GoTo 0
+        Else
+            dateVal = Now
+        End If
+    Else
+        ' new Date(year, month, day, hour, min, sec, ms)
+        ' Simplificado - solo year, month, day
+        Dim yearVal As CValue, monthVal As CValue, dayVal As CValue
+        
+        Set arg = args(1)
+        Set yearVal = EvaluateExpression(arg)
+        
+        Set arg = args(2)
+        Set monthVal = EvaluateExpression(arg)
+        
+        Dim day As Long
+        day = 1
+        If args.count >= 3 Then
+            Set arg = args(3)
+            Set dayVal = EvaluateExpression(arg)
+            day = CLng(dayVal.ToNumber())
+        End If
+        
+        dateVal = DateSerial(CLng(yearVal.ToNumber()), _
+                            CLng(monthVal.ToNumber()) + 1, _
+                            day)
+    End If
+    
+    ' Agregar métodos del Date object
+    
+    ' toString()
+    Dim toStringFunc As New CValue
+    toStringFunc.vType = vtfunction
+    ' Crear función que retorna la fecha como string
+    Dim toStrFn As New CFunction
+    toStrFn.name = "toString"
+    Set toStrFn.Body = Nothing  ' Método nativo
+    Set toStringFunc.objVal = toStrFn
+    
+    result.objectProps.add toStringFunc, "toString"
+    result.objectKeys.add "toString", "toString"
+    
+    ' getTime() - milliseconds desde epoch
+    Dim getTimeFunc As New CValue
+    getTimeFunc.vType = vtfunction
+    Dim getTimeFn As New CFunction
+    getTimeFn.name = "getTime"
+    Set getTimeFn.Body = Nothing
+    Set getTimeFunc.objVal = getTimeFn
+    
+    result.objectProps.add getTimeFunc, "getTime"
+    result.objectKeys.add "getTime", "getTime"
+    
+    ' Guardar el valor de fecha internamente
+    Dim internalDate As New CValue
+    internalDate.vType = vtString
+    internalDate.strVal = Format$(dateVal, "ddd mmm dd yyyy hh:nn:ss")
+    
+    result.objectProps.add internalDate, "_date"
+    result.objectKeys.add "_date", "_date"
+    
+    ' Timestamp interno
+    Dim timestamp As New CValue
+    timestamp.vType = vtNumber
+    timestamp.numVal = DateDiff("s", #1/1/1970#, dateVal) * 1000
+    
+    result.objectProps.add timestamp, "_timestamp"
+    result.objectKeys.add "_timestamp", "_timestamp"
+    
+    Set CreateDateObject = result
+End Function
+
+' ? IsDateMethod,CallDateMethod
+Private Function IsDateMethod(methodName As String) As Boolean
+    Select Case methodName
+        Case "toString", "toDateString", "toTimeString", _
+             "getTime", "getFullYear", "getMonth", "getDate", _
+             "getHours", "getMinutes", "getSeconds", "getMilliseconds"
+            IsDateMethod = True
+        Case Else
+            IsDateMethod = False
+    End Select
+End Function
+
+Private Function CallDateMethod(dateObj As CValue, methodName As String, args As Collection) As CValue
+    Dim result As New CValue
+    
+    ' Obtener el timestamp interno
+    Dim timestampVal As CValue
+    Set timestampVal = dateObj.GetProperty("_timestamp")
+    
+    If timestampVal Is Nothing Then
+        result.vType = vtString
+        result.strVal = "Invalid Date"
+        Set CallDateMethod = result
+        Exit Function
+    End If
+    
+    ' Convertr timestamp to Date VB6
+    Dim dateVal As Date
+    dateVal = DateAdd("s", timestampVal.numVal / 1000, #1/1/1970#)
+    
+    Select Case methodName
+        Case "toString"
+            result.vType = vtString
+            result.strVal = Format$(dateVal, "ddd mmm dd yyyy hh:nn:ss")
+            
+        Case "toDateString"
+            result.vType = vtString
+            result.strVal = Format$(dateVal, "ddd mmm dd yyyy")
+            
+        Case "toTimeString"
+            result.vType = vtString
+            result.strVal = Format$(dateVal, "hh:nn:ss")
+            
+        Case "getTime"
+            result.vType = vtNumber
+            result.numVal = timestampVal.numVal
+            
+        Case "getFullYear"
+            result.vType = vtNumber
+            result.numVal = Year(dateVal)
+            
+        Case "getMonth"
+            result.vType = vtNumber
+            result.numVal = Month(dateVal) - 1  ' JavaScript is 0-based
+            
+        Case "getDate"
+            result.vType = vtNumber
+            result.numVal = day(dateVal)
+            
+        Case "getHours"
+            result.vType = vtNumber
+            result.numVal = Hour(dateVal)
+            
+        Case "getMinutes"
+            result.vType = vtNumber
+            result.numVal = Minute(dateVal)
+            
+        Case "getSeconds"
+            result.vType = vtNumber
+            result.numVal = Second(dateVal)
+            
+        Case "getMilliseconds"
+            result.vType = vtNumber
+            result.numVal = 0  ' VB6 not have milliseconds
+            
+        Case Else
+            result.vType = vtUndefined
+    End Select
+    
+    Set CallDateMethod = result
+End Function
+
+

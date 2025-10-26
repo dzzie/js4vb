@@ -1126,6 +1126,24 @@ Private Function ParseLeftHandSideExpression() As CNode
     
     If MatchKeyword("new") Then
         Set expr = ParseNewExpression()
+        
+        ' ?? ADD: Allow member/call access after 'new'
+        ' Ejemplo: new Date().toString()
+        Do While match(".") Or match("[") Or match("(")
+            If match(".") Then
+                Set expr = ParseStaticMember(expr)
+            ElseIf match("[") Then
+                Set expr = ParseComputedMember(expr)
+            ElseIf match("(") Then
+                ' Convertir a CallExpression si hay ()
+                Dim callNode As New CNode
+                callNode.tType = CallExpression_Node
+                callNode.LineNumber = expr.LineNumber
+                Set callNode.Callee = expr
+                Set callNode.Arguments = ParseArguments()
+                Set expr = callNode
+            End If
+        Loop
     Else
         Set expr = ParseCallExpression()
     End If
@@ -1244,7 +1262,7 @@ Private Function ParseStaticMember(obj As CNode) As CNode
     Dim propNode As CNode       ' ? REMOVE "As New"
     Set propNode = New CNode    ' ? CREATE NEW
     propNode.tType = Identifier_Node
-    propNode.Name = lookahead.Value
+    propNode.name = lookahead.Value
     propNode.LineNumber = X
     Set lookahead = scanner.Lex()
     
@@ -1291,7 +1309,7 @@ Private Function ParsePrimaryExpression() As CNode
         Case Identifier
             'Set Node = New CNode
             Node.tType = Identifier_Node
-            Node.Name = lookahead.Value
+            Node.name = lookahead.Value
             ' Consume the identifier token
             Set lookahead = scanner.Lex()
             
@@ -1511,7 +1529,7 @@ Private Function ParseObjectExpression() As CNode
                 
                 Set keyNode = New CNode
                 keyNode.tType = Identifier_Node
-                keyNode.Name = propKind
+                keyNode.name = propKind
                 keyNode.LineNumber = getSetToken.LineNumber
                 Set prop.PropKey = keyNode
                 

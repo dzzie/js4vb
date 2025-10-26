@@ -70,51 +70,62 @@ Public Function ToString() As String
 Attribute ToString.VB_UserMemId = 0
     Select Case vType
         Case vtUndefined:
-            ToString = "undefined"
+                ToString = "undefined"
         Case vtNull:
-            ToString = "null"
+                ToString = "null"
         Case vtBoolean:
-            ToString = IIf(boolVal, "true", "false")
+                ToString = IIf(boolVal, "true", "false")
         Case vtNumber:
-            ToString = CStr(numVal)
+                ToString = CStr(numVal)
         Case vtString:
-            ToString = strVal
+                ToString = strVal
         Case vtObject:
-            ToString = "[object Object]"
-        Case vtArray:
-            ToString = "[Array]"
-        Case vtfunction:
-            If Not objVal Is Nothing Then
-                If Len(objVal.Name) > 0 Then
-                    ToString = "[Function: " & objVal.Name & "]"
+                ' Check if it's a Date object
+                Dim timestampProp As CValue
+                Set timestampProp = GetProperty("_timestamp")
+                
+                If Not timestampProp Is Nothing Then
+                    ' It's a Date object - format it
+                    Dim dateVal As Date
+                    dateVal = DateAdd("s", timestampProp.numVal / 1000, #1/1/1970#)
+                    ToString = Format$(dateVal, "ddd mmm dd yyyy hh:nn:ss")
                 Else
-                    ToString = "[Function (anonymous)]"
+                    ToString = "[object Object]"
                 End If
-            Else
-                ToString = "[Function]"
-            End If
+        Case vtArray:
+                ToString = "[Array]"
+        Case vtfunction:
+                If Not objVal Is Nothing Then
+                    If Len(objVal.name) > 0 Then
+                        ToString = "[Function: " & objVal.name & "]"
+                    Else
+                        ToString = "[Function (anonymous)]"
+                    End If
+                Else
+                    ToString = "[Function]"
+                End If
             
         Case vtInt64:
-            Dim U64 As New ULong64
-            U64.mode = mSigned
-            U64.rawValue = int64Val
-            ToString = U64.ToString(mUnsigned) '& "n"
+                Dim U64 As New ULong64
+                U64.mode = mSigned
+                U64.rawValue = int64Val
+                ToString = U64.ToString(mUnsigned) '& "n"
             
         Case vtCOMObject:
-            ' Show the actual COM type name
-            If Not objVal Is Nothing Then
-                On Error Resume Next
-                ToString = "[" & TypeName(objVal) & "]"
-                If Err.Number <> 0 Then
-                    ToString = "[COM Object]"
+                ' Show the actual COM type name
+                If Not objVal Is Nothing Then
+                    On Error Resume Next
+                    ToString = "[" & TypeName(objVal) & "]"
+                    If Err.Number <> 0 Then
+                        ToString = "[COM Object]"
+                    End If
+                    On Error GoTo 0
+                Else
+                    ToString = "[COM Object (null)]"
                 End If
-                On Error GoTo 0
-            Else
-                ToString = "[COM Object (null)]"
-            End If
             
         Case Else:
-            ToString = "[unknown]"
+                ToString = "[unknown]"
     End Select
 End Function
 
