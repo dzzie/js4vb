@@ -1,0 +1,197 @@
+================================================================================
+                    OPERATOR BEHAVIOR TABLE
+           BigInt-Number Mixing: Before vs After Implementation
+================================================================================
+
++------------+--------+--------+-------------------+-------------------+
+| Operation  |  Left  | Right  |      BEFORE       |       AFTER       |
++------------+--------+--------+-------------------+-------------------+
+| Arithmetic Operators                                                 |
++------------+--------+--------+-------------------+-------------------+
+|     +      | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     +      | Number | BigInt | X ERROR           | √ Returns BigInt  |
+|     -      | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     -      | Number | BigInt | X ERROR           | √ Returns BigInt  |
+|     *      | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     *      | Number | BigInt | X ERROR           | √ Returns BigInt  |
+|     /      | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     /      | Number | BigInt | X ERROR           | √ Returns BigInt  |
+|     %      | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     %      | Number | BigInt | X ERROR           | √ Returns BigInt  |
++------------+--------+--------+-------------------+-------------------+
+| Bitwise Operators                                                    |
++------------+--------+--------+-------------------+-------------------+
+|     &      | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     &      | Number | BigInt | X ERROR           | √ Returns BigInt  |
+|     |      | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     |      | Number | BigInt | X ERROR           | √ Returns BigInt  |
+|     ^      | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     ^      | Number | BigInt | X ERROR           | √ Returns BigInt  |
+|     <<     | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     <<     | Number | BigInt | X ERROR           | √ Returns BigInt  |
+|     >>     | BigInt | Number | X ERROR           | √ Returns BigInt  |
+|     >>     | Number | BigInt | X ERROR           | √ Returns BigInt  |
++------------+--------+--------+-------------------+-------------------+
+| Comparison Operators (Return Boolean)                               |
++------------+--------+--------+-------------------+-------------------+
+|     <      | BigInt | Number | √ Returns Boolean | √ Returns Boolean |
+|     <      | Number | BigInt | √ Returns Boolean | √ Returns Boolean |
+|     >      | BigInt | Number | √ Returns Boolean | √ Returns Boolean |
+|     >      | Number | BigInt | √ Returns Boolean | √ Returns Boolean |
+|     <=     | BigInt | Number | √ Returns Boolean | √ Returns Boolean |
+|     <=     | Number | BigInt | √ Returns Boolean | √ Returns Boolean |
+|     >=     | BigInt | Number | √ Returns Boolean | √ Returns Boolean |
+|     >=     | Number | BigInt | √ Returns Boolean | √ Returns Boolean |
+|     ==     | BigInt | Number | √ Returns Boolean | √ Returns Boolean |
+|     ==     | Number | BigInt | √ Returns Boolean | √ Returns Boolean |
+|     !=     | BigInt | Number | √ Returns Boolean | √ Returns Boolean |
+|     !=     | Number | BigInt | √ Returns Boolean | √ Returns Boolean |
+|    ===     | BigInt | Number | √ Returns Boolean | √ Returns Boolean |
+|    ===     | Number | BigInt | √ Returns Boolean | √ Returns Boolean |
+|    !==     | BigInt | Number | √ Returns Boolean | √ Returns Boolean |
+|    !==     | Number | BigInt | √ Returns Boolean | √ Returns Boolean |
++------------+--------+--------+-------------------+-------------------+
+
+Legend:
+  X ERROR          = Throws "Cannot mix BigInt with other types" error
+  √ Returns BigInt = Auto-promotes Number to BigInt, returns BigInt result
+  √ Returns Boolean = Comparison allowed, returns true/false
+
+================================================================================
+                         EXAMPLE CONVERSIONS
+================================================================================
+
+BEFORE (Strict Mode):
+  0x140000000n + 0x1000           --> ERROR!
+  0x140000000n + BigInt(0x1000)   --> 0x140001000n (works but verbose)
+  0xFFFFFFFFn == 4294967295       --> true (comparisons work)
+
+AFTER (Auto-Promotion):
+  0x140000000n + 0x1000           --> 0x140001000n (auto-promotes!)
+  0x140000000n + BigInt(0x1000)   --> 0x140001000n (still works)
+  0xFFFFFFFFn == 4294967295       --> true (still works)
+
+
+================================================================================
+                    TYPE PROMOTION FLOW DIAGRAM
+================================================================================
+
+  Operation: BigInt + Number
+       |
+       v
+  +-------------------+
+  | Left: vtInt64?    |---No--> Continue with normal Number math
+  | Right: vtInt64?   |
+  +-------------------+
+       |
+      Yes
+       |
+       v
+  +-------------------+
+  | Convert Number    |  <-- Auto-promotion happens here!
+  | operands to       |      Number -> ToInt64() -> Currency
+  | Currency (Int64)  |
+  +-------------------+
+       |
+       v
+  +-------------------+
+  | Perform operation |
+  | with both as      |
+  | Int64             |
+  +-------------------+
+       |
+       v
+  +-------------------+
+  | Return result as  |  <-- Result type is BigInt
+  | vtInt64           |
+  +-------------------+
+
+================================================================================
+                         CONVERSION FUNCTIONS
+================================================================================
+
+Direction: Number --> BigInt
+  Function: ToInt64()
+  Input:    Double (VB6 Number)
+  Output:   Currency (VB6 Int64)
+  Method:   Split into hi/lo longs, avoid Currency scaling issue
+  Example:  4294967295 --> 0xFFFFFFFF (as Currency)
+
+Direction: BigInt --> Number
+  Function: ToNumber()
+  Input:    Currency (VB6 Int64)
+  Output:   Double (VB6 Number)
+  Method:   Reconstruct from hi/lo longs as unsigned
+  Example:  0xFFFFFFFF (Currency) --> 4294967295.0
+
+Warning: BigInt --> Number conversion may lose precision for values > 2^53
+
+================================================================================
+                           BEHAVIOR TABLE
+================================================================================
+
+Hex Literal          | Decimal Value       | Type   | Reason
+---------------------|---------------------|--------|------------------------
+0x00000000           | 0                   | Number | < 2^31
+0x00000001           | 1                   | Number | < 2^31
+0x7FFFFFFF           | 2,147,483,647       | Number | = 2^31 - 1 (signed max)
+0x80000000           | 2,147,483,648       | BigInt | > signed 32-bit max
+0xFFFFFFFF           | 4,294,967,295       | BigInt | > signed 32-bit max
+0x100000000          | 4,294,967,296       | BigInt | > 32-bit (9 digits)
+0x140000000          | 5,368,709,120       | BigInt | > 32-bit
+
+================================================================================
+                           TEST CASES
+================================================================================
+
+Test these after implementation:
+
+' Boundary tests
+print(typeof 0x7FFFFFFF);        // "number" - exactly at signed max
+print(typeof 0x80000000);        // "bigint" - just over signed max
+print(typeof 0xFFFFFFFF);        // "bigint" - unsigned 32-bit max
+
+' Addition overflow
+print(0x7FFFFFFF + 1);           // 2147483648 (Number, fits in double)
+print(0x80000000 + 0x80000000);  // BigInt + BigInt = works!
+print(0xFFFFFFFF + 1);           // BigInt + Number = auto-promotes!
+
+' Smaller values stay as Number
+print(typeof 0xFF);              // "number"
+print(typeof 0xFFFF);            // "number"
+print(typeof 0xFFFFFF);          // "number"
+print(typeof 0x7FFFFFF);         // "number" - 7 digits
+
+' Large values are BigInt
+print(typeof 0x100000000);       // "bigint" - 9 digits
+print(typeof 0x140000000);       // "bigint" - IDA typical
+
+' Edge cases
+print(typeof 0x0FFFFFFF);        // "number" - 7 digits with leading 0
+print(typeof 0x00000001);        // "number" - leading zeros don't matter
+
+================================================================================
+                        WHY THIS IS SAFE
+================================================================================
+
+1. CLEAR BOUNDARY
+   - Uses signed 32-bit max (0x7FFFFFFF) as the dividing line
+   - This is a well-understood boundary in programming
+
+2. CONSERVATIVE
+   - Only promotes when value truly needs more than signed 32-bit
+   - Doesn't promote small values unnecessarily
+
+3. PREDICTABLE
+   - Simple rule: First hex digit >= 8 (for 8-digit hex) = BigInt
+   - Easy to remember and explain
+
+4. WORKS FOR IDA
+   - Typical IDA addresses (0x40000000, 0x140000000) auto-promote
+   - Small offsets (0x1000) stay as Number
+   - Addition of two large addresses works correctly
+
+5. JAVASCRIPT COMPATIBLE
+   - JavaScript doesn't have this auto-promotion, but it's consistent
+   - Explicit 'n' suffix still works for any value
+   - General users can use either Numbers or BigInt naturally

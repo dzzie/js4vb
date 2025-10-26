@@ -1,0 +1,18 @@
+HandleConsoleLog
+Set callback = arg.objVal
+callfunction
+CallFunction
+CallJSFunction
+DebugPushFrame
+m_callStack
+debugcheck
+debug.print
+typeof
+RaiseEvent OnError
+extractline
+vbobjecterror
+raiseevent OnError
+linenumber
+m_currentLine
+m_debugMode
+m_output

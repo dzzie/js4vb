@@ -1,0 +1,9 @@
+EXPORTS
+    CreateProxyForObjectRaw
+    ReleaseDispatchRaw
+    SetProxyResolverWins
+    ClearProxyNameCache
+    CreateProxyForObjectRawEx
+    SetProxyOverride
+    ComTypeName
+    SendDbgMsg

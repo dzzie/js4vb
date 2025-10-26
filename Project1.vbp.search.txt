@@ -1,0 +1,51 @@
+analyzer
+node.elem
+Elements
+Elements.count
+node.elements
+SwitchStatement_Node
+references
+findreferences
+beautify
+Dim indexVal As New CValue
+Dim callbackArgs As New Collection
+CFunction
+catch
+got snippet
+graph
+IsUnused
+m_jsObject
+Add new property!
+DispCallFunc
+ObjectFromPtr
+InitFromVarName
+EvalAsObject
+CValueToVariant
+CALLFUNCTION
+CallExpression_Node
+Calling object as function
+>>> 
+cvalue
+collectionex
+objectProps
+objectKeys
+FunctionExpression_Node
+FunctionDeclaration
+CreateFunctionValue
+>>>
+GetExecutableLines
+FindStatementIndexAtLine
+CanSetNextStatementTo
+m_sourceCode
+esprima
+0x
+hex
+LexHexNumber
+imagelist
+StepInto
+ThrowStatement_Node
+Case "isNaN"
+StringifyJSON
+">>>
+as new
+ParseStaticMember(expr)

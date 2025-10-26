@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.33529.622
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dynproxy", "dynproxy.vcxproj", "{85861B91-70AA-43DE-B270-BC849F16E14F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{85861B91-70AA-43DE-B270-BC849F16E14F}.Debug|x64.ActiveCfg = Debug|x64
+		{85861B91-70AA-43DE-B270-BC849F16E14F}.Debug|x64.Build.0 = Debug|x64
+		{85861B91-70AA-43DE-B270-BC849F16E14F}.Debug|x86.ActiveCfg = Debug|Win32
+		{85861B91-70AA-43DE-B270-BC849F16E14F}.Debug|x86.Build.0 = Debug|Win32
+		{85861B91-70AA-43DE-B270-BC849F16E14F}.Release|x64.ActiveCfg = Release|x64
+		{85861B91-70AA-43DE-B270-BC849F16E14F}.Release|x64.Build.0 = Release|x64
+		{85861B91-70AA-43DE-B270-BC849F16E14F}.Release|x86.ActiveCfg = Release|Win32
+		{85861B91-70AA-43DE-B270-BC849F16E14F}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F10D2DF3-D02E-42F7-B14D-38E1BFC938DB}
+	EndGlobalSection
+EndGlobal
