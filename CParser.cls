@@ -36,6 +36,12 @@ Private Sub Class_Initialize()
     Set scanner = New CScanner
 End Sub
 
+Friend Function ParseSingleExpression(source As String) As CNode
+    scanner.init source
+    Set lookahead = scanner.Lex()
+    Set ParseSingleExpression = ParseExpression()
+End Function
+
 Public Function ParseScript(source As String) As CNode
     On Error GoTo ErrorHandler
     
@@ -65,10 +71,10 @@ Public Function ParseScript(source As String) As CNode
     Exit Function
     
 ErrorHandler:
-    Debug.Print "ERROR in ParseScript: " & Err.Description
+    Debug.Print "ERROR in ParseScript: " & Err.description
     Debug.Print "Error Number: " & Err.Number
     Debug.Print "Current token: " & lookahead.Value & " (type " & lookahead.tType & ")"
-    Err.Raise Err.Number, Err.source, Err.Description
+    Err.Raise Err.Number, Err.source, Err.description
 End Function
 
 ' ============================================
@@ -131,7 +137,7 @@ Private Function ParseStatementListItem() As CNode
 ErrorHandler:
     Debug.Print "ERROR in ParseStatementListItem"
     Debug.Print "  Token: '" & lookahead.Value & "' (type " & lookahead.tType & ")"
-    Err.Raise Err.Number, "ParseStatementListItem", Err.Description
+    Err.Raise Err.Number, "ParseStatementListItem", Err.description
 End Function
 
 Private Function ParseStatement() As CNode
@@ -200,7 +206,7 @@ Private Function ParseStatement() As CNode
 ErrorHandler:
     Debug.Print "ERROR in ParseStatement"
     Debug.Print "  Token: '" & lookahead.Value & "' (type " & lookahead.tType & ")"
-    Err.Raise Err.Number, "ParseStatement", Err.Description
+    Err.Raise Err.Number, "ParseStatement", Err.description
 End Function
 
 Private Function ParseWithStatement() As CNode
@@ -523,7 +529,7 @@ Private Function ParseForStatement() As CNode
             
             Dim assignNode As New CNode
             assignNode.tType = AssignmentExpression_Node
-            assignNode.Operator = op
+            assignNode.operator = op
             assignNode.LineNumber = assignStartLine
             Set assignNode.Left = firstExpr
             Set assignNode.Right = ParseAssignmentExpression()
@@ -728,7 +734,7 @@ End Function
 ' Expression Parsing - The Fun Part!
 ' ============================================
 
-Private Function ParseExpression() As CNode
+Friend Function ParseExpression() As CNode 'used in new Function()
     ' Sequence expression (comma operator)
     Dim expr As CNode, startLine As Long
     Set expr = ParseAssignmentExpression()
@@ -768,7 +774,7 @@ Private Function ParseAssignmentExpression() As CNode
             
             Dim Node As New CNode
             Node.tType = AssignmentExpression_Node
-            Node.Operator = op
+            Node.operator = op
             Node.LineNumber = startLine
             Set Node.Left = expr
             Set Node.Right = ParseAssignmentExpression()
@@ -832,7 +838,7 @@ Private Function ParseLogicalORExpression() As CNode
         Set Node = New CNode
         Node.tType = LogicalExpression_Node
         Node.LineNumber = startLine
-        Node.Operator = op
+        Node.operator = op
         Set Node.Left = expr
         Set Node.Right = ParseLogicalANDExpression()
         Set expr = Node
@@ -853,7 +859,7 @@ Private Function ParseLogicalANDExpression() As CNode
         
         Set Node = New CNode
         Node.tType = LogicalExpression_Node
-        Node.Operator = op
+        Node.operator = op
         Node.LineNumber = startLine
         Set Node.Left = expr
         Set Node.Right = ParseBitwiseORExpression()
@@ -875,7 +881,7 @@ Private Function ParseBitwiseORExpression() As CNode
         
         Set Node = New CNode
         Node.tType = BinaryExpression_Node
-        Node.Operator = op
+        Node.operator = op
         Node.LineNumber = startLine
         Set Node.Left = expr
         Set Node.Right = ParseBitwiseXORExpression()
@@ -897,7 +903,7 @@ Private Function ParseBitwiseXORExpression() As CNode
         
         Set Node = New CNode
         Node.tType = BinaryExpression_Node
-        Node.Operator = op
+        Node.operator = op
         Node.LineNumber = startLine
         Set Node.Left = expr
         Set Node.Right = ParseBitwiseANDExpression()
@@ -919,7 +925,7 @@ Private Function ParseBitwiseANDExpression() As CNode
         
         Set Node = New CNode
         Node.tType = BinaryExpression_Node
-        Node.Operator = op
+        Node.operator = op
         Node.LineNumber = startLine
         Set Node.Left = expr
         Set Node.Right = ParseEqualityExpression()
@@ -941,7 +947,7 @@ Private Function ParseEqualityExpression() As CNode
         
         Set Node = New CNode
         Node.tType = BinaryExpression_Node
-        Node.Operator = op
+        Node.operator = op
         Node.LineNumber = startLine
         Set Node.Left = expr
         Set Node.Right = ParseRelationalExpression()
@@ -964,7 +970,7 @@ Private Function ParseRelationalExpression() As CNode
         
         Set Node = New CNode
         Node.tType = BinaryExpression_Node
-        Node.Operator = op
+        Node.operator = op
         Node.LineNumber = startLine
         Set Node.Left = expr
         Set Node.Right = ParseShiftExpression()
@@ -986,7 +992,7 @@ Private Function ParseShiftExpression() As CNode
         
         Set Node = New CNode
         Node.tType = BinaryExpression_Node
-        Node.Operator = op
+        Node.operator = op
         Node.LineNumber = startLine
         Set Node.Left = expr
         Set Node.Right = ParseAdditiveExpression()
@@ -1008,7 +1014,7 @@ Private Function ParseAdditiveExpression() As CNode
         
         Set Node = New CNode
         Node.tType = BinaryExpression_Node
-        Node.Operator = op
+        Node.operator = op
         Node.LineNumber = startLine
         Set Node.Left = expr
         Set Node.Right = ParseMultiplicativeExpression()
@@ -1031,7 +1037,7 @@ Private Function ParseMultiplicativeExpression() As CNode
         Expect op
         Set Node = New CNode
         Node.tType = BinaryExpression_Node
-        Node.Operator = op
+        Node.operator = op
         Node.LineNumber = startLine
         Set Node.Left = expr
         Set Node.Right = ParseUnaryExpression()
@@ -1056,10 +1062,10 @@ Private Function ParseUnaryExpression() As CNode
         If match("++") Or match("--") Then
             Set Node = New CNode
             Node.tType = UpdateExpression_Node
-            Node.Operator = lookahead.Value
+            Node.operator = lookahead.Value
             Node.LineNumber = startLine
             Node.Prefix = True
-            Expect Node.Operator
+            Expect Node.operator
             Set Node.Argument = ParseUnaryExpression()
             Set expr = Node
             Set ParseUnaryExpression = expr
@@ -1067,10 +1073,10 @@ Private Function ParseUnaryExpression() As CNode
         ElseIf match("+") Or match("-") Or match("~") Or match("!") Then
             Set Node = New CNode
             Node.tType = UnaryExpression_Node
-            Node.Operator = lookahead.Value
+            Node.operator = lookahead.Value
             Node.LineNumber = startLine
             Node.Prefix = True
-            Expect Node.Operator
+            Expect Node.operator
             Set Node.Argument = ParseUnaryExpression()
             Set expr = Node
             Set ParseUnaryExpression = expr
@@ -1078,10 +1084,10 @@ Private Function ParseUnaryExpression() As CNode
         ElseIf MatchKeyword("typeof") Or MatchKeyword("void") Or MatchKeyword("delete") Then
             Set Node = New CNode
             Node.tType = UnaryExpression_Node
-            Node.Operator = lookahead.Value
+            Node.operator = lookahead.Value
             Node.LineNumber = startLine
             Node.Prefix = True
-            Expect Node.Operator
+            Expect Node.operator
             Set Node.Argument = ParseUnaryExpression()
             Set expr = Node
             Set ParseUnaryExpression = expr
@@ -1105,11 +1111,11 @@ Private Function ParsePostfixExpression() As CNode
             startLine = lookahead.LineNumber  ' Capture BEFORE consuming
             Set Node = New CNode
             Node.tType = UpdateExpression_Node
-            Node.Operator = lookahead.Value
+            Node.operator = lookahead.Value
             Node.LineNumber = startLine
             Node.Prefix = False
             Set Node.Argument = expr
-            Expect Node.Operator
+            Expect Node.operator
             Set expr = Node
         End If
     End If
@@ -1262,7 +1268,7 @@ Private Function ParseStaticMember(obj As CNode) As CNode
     Dim propNode As CNode       ' ? REMOVE "As New"
     Set propNode = New CNode    ' ? CREATE NEW
     propNode.tType = Identifier_Node
-    propNode.name = lookahead.Value
+    propNode.Name = lookahead.Value
     propNode.LineNumber = X
     Set lookahead = scanner.Lex()
     
@@ -1309,7 +1315,7 @@ Private Function ParsePrimaryExpression() As CNode
         Case Identifier
             'Set Node = New CNode
             Node.tType = Identifier_Node
-            Node.name = lookahead.Value
+            Node.Name = lookahead.Value
             ' Consume the identifier token
             Set lookahead = scanner.Lex()
             
@@ -1529,7 +1535,7 @@ Private Function ParseObjectExpression() As CNode
                 
                 Set keyNode = New CNode
                 keyNode.tType = Identifier_Node
-                keyNode.name = propKind
+                keyNode.Name = propKind
                 keyNode.LineNumber = getSetToken.LineNumber
                 Set prop.PropKey = keyNode
                 

@@ -10,6 +10,14 @@ Begin VB.Form Form1
    ScaleHeight     =   8670
    ScaleWidth      =   11040
    StartUpPosition =   2  'CenterScreen
+   Begin VB.CommandButton cmdPaste 
+      Caption         =   "Paste"
+      Height          =   495
+      Left            =   5280
+      TabIndex        =   7
+      Top             =   6000
+      Width           =   975
+   End
    Begin VB.CheckBox chkSafeSubset 
       Caption         =   "Safe Subset"
       Height          =   375
@@ -54,7 +62,7 @@ Begin VB.Form Form1
    Begin VB.CommandButton cmdExec 
       Caption         =   "Execute"
       Height          =   465
-      Left            =   9405
+      Left            =   9420
       TabIndex        =   1
       Top             =   5985
       Width           =   1455
@@ -117,7 +125,19 @@ Attribute intrep.VB_VarHelpID = -1
 Dim last As String
 
 Private Sub cmdAbort_Click()
-    intrep.Abort
+    If Not intrep Is Nothing Then intrep.Abort
+End Sub
+
+Private Sub cmdPaste_Click()
+    txtScript = unixToDOS(Clipboard.GetText)
+End Sub
+
+Private Sub intrep_AuditEvent(category As jsvb.enumAuditEvents, description As String, ByRef cancel As Boolean)
+    
+    Debug.Print "AuditEvent: " & intrep.AuditEventToStr(category) & " : " & description
+    
+    'If category = aeActiveX Then cancel = True 'works
+    
 End Sub
 
 Private Sub intrep_ConsoleLog(ByVal msg As String)
@@ -139,11 +159,12 @@ Private Sub cmdExec_Click()
     
     WriteFile last, txtScript.Text
     
+    intrep.AuditMode = True
     intrep.UseSafeSubset = (chkSafeSubset.Value = 1)
     intrep.AddCOMObject "form", Me
     intrep.Execute txtScript.Text
     
-    If Err.Number <> 0 Then MsgBox Err.Description
+    If Err.Number <> 0 Then MsgBox Err.description
     Me.Caption = "Stopped"
     
 End Sub
@@ -162,7 +183,7 @@ Private Sub Form_Load()
 
 End Sub
 
-Private Sub Form_Unload(Cancel As Integer)
+Private Sub Form_Unload(cancel As Integer)
     On Error Resume Next
     WriteFile last, txtScript.Text
 End Sub
@@ -196,7 +217,14 @@ Sub WriteFile(path, it)
     Close f
 End Sub
 
-
+Function unixToDOS(ByVal tmp As String)
+    Dim isMixed As Boolean
+    isMixed = (InStr(tmp, vbCrLf) > 0)
+    If isMixed Then tmp = VBA.Replace(tmp, vbCrLf, Chr(5))
+    tmp = VBA.Replace(tmp, vbLf, vbCrLf)
+    If isMixed Then tmp = VBA.Replace(tmp, Chr(5), vbCrLf)
+    unixToDOS = tmp
+End Function
 
 
 

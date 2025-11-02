@@ -330,6 +330,7 @@ Private Function ScanPunctuator() As CToken
     Dim ch As String
     Dim ch2 As String
     Dim ch3 As String
+    Dim ch4 As String
     
     Start = index
     ch = CharAt(index)
@@ -342,8 +343,12 @@ Private Function ScanPunctuator() As CToken
     ' Try 3-character punctuators first
     ch2 = CharAt(index + 1)
     ch3 = CharAt(index + 2)
+    ch4 = CharAt(index + 3)
     
-    If ch = "=" And ch2 = "=" And ch3 = "=" Then
+    If ch = ">" And ch2 = ">" And ch3 = ">" And ch4 = "=" Then
+        index = index + 4
+        token.Value = ">>>="
+    ElseIf ch = "=" And ch2 = "=" And ch3 = "=" Then
         index = index + 3
         token.Value = "==="
     ElseIf ch = "!" And ch2 = "=" And ch3 = "=" Then

@@ -55,54 +55,20 @@ Public LineStart As Long
 Public Start As Long
 Public End_ As Long  ' "End" is reserved in VB
 
-' Keywords lookup
-Private keywords As Collection
-
-Private Sub Class_Initialize()
-    Set keywords = New Collection
-    
-    ' ES5 keywords
-    On Error Resume Next
-    keywords.add "break", "break"
-    keywords.add "case", "case"
-    keywords.add "catch", "catch"
-    keywords.add "continue", "continue"
-    keywords.add "debugger", "debugger"
-    keywords.add "default", "default"
-    keywords.add "delete", "delete"
-    keywords.add "do", "do"
-    keywords.add "else", "else"
-    keywords.add "finally", "finally"
-    keywords.add "for", "for"
-    keywords.add "function", "function"
-    keywords.add "if", "if"
-    keywords.add "in", "in"
-    keywords.add "instanceof", "instanceof"
-    keywords.add "new", "new"
-    keywords.add "return", "return"
-    keywords.add "switch", "switch"
-    keywords.add "this", "this"
-    keywords.add "throw", "throw"
-    keywords.add "try", "try"
-    keywords.add "typeof", "typeof"
-    keywords.add "var", "var"
-    keywords.add "void", "void"
-    keywords.add "while", "while"
-    keywords.add "with", "with"
-    
-    ' Literals
-    keywords.add "null", "null"
-    keywords.add "true", "true"
-    keywords.add "false", "false"
-    On Error GoTo 0
-End Sub
-
 Public Function IsKeyword(word As String) As Boolean
-    On Error Resume Next
-    Dim X As String
-    X = keywords(word)
-    IsKeyword = (Err.Number = 0)
-    On Error GoTo 0
+    ' JavaScript keywords are case-sensitive
+    ' "function" is a keyword, "Function" is not - we can not use collection key lookup
+    Select Case word
+        Case "break", "case", "catch", "continue", "debugger", _
+             "default", "delete", "do", "else", "finally", _
+             "for", "function", "if", "in", "instanceof", _
+             "new", "return", "switch", "this", "throw", _
+             "try", "typeof", "var", "void", "while", "with", _
+             "null", "true", "false"
+            IsKeyword = True
+        Case Else
+            IsKeyword = False
+    End Select
 End Function
 
 Public Function IsBooleanLiteral(word As String) As Boolean

@@ -61,6 +61,20 @@ Public Enum DebugStepMode
     smStepOut = 3   ' Run until return from current function
 End Enum
 
+Public Enum enumAuditEvents
+    aeEval = 0
+    aeDecode = 1
+    aeBracketAccess = 2
+    aeCOMCall = 3
+    aeActiveX = 4
+    aeXOR = 5
+    aeParse = 6
+    aeFunctionConstructor = 7
+End Enum
+
+Public AuditMode As Boolean
+Public Event AuditEvent(category As enumAuditEvents, description As String, ByRef cancel As Boolean)
+
 ' Debugger events
 Public Event OnBreakpoint(ByVal LineNumber As Long, ByVal sourceCode As String)
 Public Event OnStep(ByVal LineNumber As Long, ByVal sourceCode As String)
@@ -72,15 +86,34 @@ Public Event ConsoleLog(ByVal msg As String)
 
 Const debug_mode As Boolean = False
 
+Function AuditEventToStr(ae As enumAuditEvents) As String
+    
+    Dim categoryName As String
+    
+    Select Case ae
+        Case aeEval: categoryName = "EVAL"
+        Case aeDecode: categoryName = "DECODE"
+        Case aeBracketAccess: categoryName = "BRACKET"
+        Case aeCOMCall: categoryName = "COM_CALL"
+        Case aeActiveX: categoryName = "ACTIVEX"
+        Case aeXOR: categoryName = "XOR"
+        Case aeParse: categoryName = "PARSE"
+        Case aeFunctionConstructor: categoryName = "FUNC_CTOR"
+    End Select
+    
+    AuditEventToStr = categoryName
+
+End Function
+
 ' FOR TESTING ONLY - Setup minimal debug state
-Friend Sub TestSetupDebugState(Code As String, currentLine As Long)
-    m_sourceCode = Code
+Friend Sub TestSetupDebugState(code As String, currentLine As Long)
+    m_sourceCode = code
     m_currentLine = currentLine
     m_debugMode = True
     m_debugPaused = True
     
     ' Parse code
-    Set m_programAST = m_parser.ParseScript(Code)
+    Set m_programAST = m_parser.ParseScript(code)
 End Sub
 
 Property Get GlobalScope() As CScope
@@ -90,6 +123,18 @@ End Property
 Sub Abort()
     m_AbortExec = True
     StopDebug
+End Sub
+
+Private Sub RaiseAudit(ByVal category As enumAuditEvents, ByVal description As String)
+    Dim cancel As Boolean
+    If AuditMode Then
+        RaiseEvent AuditEvent(category, description, cancel)
+        If cancel Then
+            m_AbortExec = True
+            Err.Raise vbObjectError + 1000, "CInterpreter.RaiseAudit", _
+                      "Execution cancelled by user audit: " & description
+        End If
+    End If
 End Sub
 
 Private Sub Class_Initialize()
@@ -375,22 +420,22 @@ Private Sub DebugPopFrame()
     End If
 End Sub
 
-Public Sub AddCode(Code As String)
+Public Sub AddCode(code As String)
     On Error GoTo ErrorHandler
     
     ' Skip empty code
-    If Len(Trim$(Code)) = 0 Then Exit Sub
+    If Len(Trim$(code)) = 0 Then Exit Sub
     
     ' Parse and execute just the new code
     Dim ast As CNode
-    Set ast = m_parser.ParseScript(Code)
+    Set ast = m_parser.ParseScript(code)
     ExecuteProgram ast
     
     ' Remember we executed this
     If Len(m_executedCode) > 0 Then
         m_executedCode = m_executedCode & vbCrLf
     End If
-    m_executedCode = m_executedCode & Code
+    m_executedCode = m_executedCode & code
     
     ' Raise completion event if debugging
     If m_debugMode Then
@@ -400,17 +445,17 @@ Public Sub AddCode(Code As String)
     Exit Sub
     
 ErrorHandler:
-    m_output = m_output & vbCrLf & "ERROR in AddCode: " & Err.Description
-    Debug.Print "AddCode Error: " & Err.Description & " - " & Err.source
+    m_output = m_output & vbCrLf & "ERROR in AddCode: " & Err.description
+    Debug.Print "AddCode Error: " & Err.description & " - " & Err.source
     
     Dim col As Long
     ' For parser errors during execution, extract line from error message
     If m_currentLine = 0 And Err.Number = vbObjectError + 2000 Then
-        m_currentLine = ExtractLineFromError(Err.Description)
-        col = ExtractColumnFromError(Err.Description)
+        m_currentLine = ExtractLineFromError(Err.description)
+        col = ExtractColumnFromError(Err.description)
     End If
     
-    RaiseEvent OnError(Err.Description, m_currentLine, Err.source, col)
+    RaiseEvent OnError(Err.description, m_currentLine, Err.source, col)
   
 End Sub
 
@@ -432,14 +477,14 @@ Public Sub ClearContext()
 End Sub
 
 ' Evaluate expression in CURRENT context (no re-parsing old code)
-Public Function Eval(Code As String) As CValue
+Public Function Eval(code As String) As CValue
     On Error GoTo ErrorHandler
     
     Dim ast As CNode
     Dim result As CValue
     
     ' Parse ONLY the new code
-    Set ast = m_parser.ParseScript(Code)
+    Set ast = m_parser.ParseScript(code)
     
     ' Should be a single expression statement
     If ast.Body.count > 0 Then
@@ -464,17 +509,17 @@ Public Function Eval(Code As String) As CValue
     Exit Function
     
 ErrorHandler:
-    m_output = m_output & vbCrLf & "ERROR: " & Err.Description
-    Debug.Print "Eval Error: " & Err.Description & " " & Err.source
+    m_output = m_output & vbCrLf & "ERROR: " & Err.description
+    Debug.Print "Eval Error: " & Err.description & " " & Err.source
     
     Dim col As Long
     ' For parser errors during execution, extract line from error message
     If m_currentLine = 0 And Err.Number = vbObjectError + 2000 Then
-        m_currentLine = ExtractLineFromError(Err.Description)
-        col = ExtractColumnFromError(Err.Description)
+        m_currentLine = ExtractLineFromError(Err.description)
+        col = ExtractColumnFromError(Err.description)
     End If
 
-    RaiseEvent OnError(Err.Description, m_currentLine, Err.source, col)
+    RaiseEvent OnError(Err.description, m_currentLine, Err.source, col)
     
     Dim undef As New CValue
     undef.vType = vtUndefined
@@ -518,11 +563,11 @@ Private Function ExtractColumnFromError(errDescription As String) As Long
 End Function
 
 ' Execute statement(s) in current context
-Public Sub EvalStatement(Code As String)
+Public Sub EvalStatement(code As String)
     On Error GoTo ErrorHandler
     
     Dim ast As CNode
-    Set ast = m_parser.ParseScript(Code)
+    Set ast = m_parser.ParseScript(code)
     
     ' Execute in the EXISTING context
     ExecuteProgram ast
@@ -530,40 +575,40 @@ Public Sub EvalStatement(Code As String)
     Exit Sub
     
 ErrorHandler:
-    m_output = m_output & vbCrLf & "ERROR: " & Err.Description & " - " & Err.source
-    Debug.Print "EvalStatement Error: " & Err.Description & " - " & Err.source
+    m_output = m_output & vbCrLf & "ERROR: " & Err.description & " - " & Err.source
+    Debug.Print "EvalStatement Error: " & Err.description & " - " & Err.source
     
     Dim col As Long
     ' For parser errors during execution, extract line from error message
     If m_currentLine = 0 And Err.Number = vbObjectError + 2000 Then
-        m_currentLine = ExtractLineFromError(Err.Description)
-        col = ExtractColumnFromError(Err.Description)
+        m_currentLine = ExtractLineFromError(Err.description)
+        col = ExtractColumnFromError(Err.description)
     End If
     
-    RaiseEvent OnError(Err.Description, m_currentLine, Err.source, col)
+    RaiseEvent OnError(Err.description, m_currentLine, Err.source, col)
 End Sub
 
 ' Get a JavaScript variable from VB6
-Public Function GetVariable(name As String) As CValue
-    Set GetVariable = m_globalScope.GetVar(name)
+Public Function GetVariable(Name As String) As CValue
+    Set GetVariable = m_globalScope.GetVar(Name)
 End Function
 
 ' Set a JavaScript variable from VB6
-Public Sub SetVariable(name As String, Value As Variant)
+Public Sub SetVariable(Name As String, Value As Variant)
     Dim val As New CValue
     Set val = VariantToCValue(Value)
-    m_globalScope.DefineVar name, val
+    m_globalScope.DefineVar Name, val
 End Sub
 
 ' Check if a JavaScript variable exists
-Public Function HasVariable(name As String) As Boolean
-    HasVariable = m_globalScope.HasVar(name)
+Public Function HasVariable(Name As String) As Boolean
+    HasVariable = m_globalScope.HasVar(Name)
 End Function
 
 ' BONUS: Get variable as VB6 Variant (convenience method)
-Public Function GetVariableAsVariant(name As String) As Variant
+Public Function GetVariableAsVariant(Name As String) As Variant
     Dim val As CValue
-    Set val = m_globalScope.GetVar(name)
+    Set val = m_globalScope.GetVar(Name)
     GetVariableAsVariant = CValueToVariant(val)
 End Function
 
@@ -633,42 +678,42 @@ Private Sub AddBuiltins()
 End Sub
 
 ' Public API: Let host add COM objects
-Public Sub AddCOMObject(name As String, obj As Object)
+Public Sub AddCOMObject(Name As String, obj As Object)
     ' Create a CValue wrapper for the COM object
     Dim val As New CValue
     val.vType = vtCOMObject
     Set val.objVal = obj
     
     ' Define in global scope
-    m_globalScope.DefineVar name, val
+    m_globalScope.DefineVar Name, val
     
     ' Also track in collection for enumeration
     On Error Resume Next
-    m_comObjects.Remove name
+    m_comObjects.Remove Name
     On Error GoTo 0
-    m_comObjects.add obj, name
+    m_comObjects.add obj, Name
 End Sub
 
 ' Public API: Remove a COM object
-Public Sub RemoveCOMObject(name As String)
+Public Sub RemoveCOMObject(Name As String)
     ' Remove from global scope
     Dim undef As New CValue
     undef.vType = vtUndefined
-    m_currentScope.SetVar name, undef
+    m_currentScope.SetVar Name, undef
     
     ' Remove from tracking
     On Error Resume Next
-    m_comObjects.Remove name
+    m_comObjects.Remove Name
     On Error GoTo 0
 End Sub
 
 ' Main entry point
-Public Sub Execute(Code As String, Optional withDebugger As Boolean = False)
+Public Sub Execute(code As String, Optional withDebugger As Boolean = False)
     On Error GoTo ErrorHandler
     
     ' Parse the code
     Dim ast As CNode
-    Set ast = m_parser.ParseScript(Code)
+    Set ast = m_parser.ParseScript(code)
     
     If withDebugger Then
         Set m_programAST = ast
@@ -686,17 +731,17 @@ Public Sub Execute(Code As String, Optional withDebugger As Boolean = False)
     Exit Sub
     
 ErrorHandler:
-    m_output = m_output & vbCrLf & "ERROR: " & Err.Description
-    Debug.Print "Interpreter Error: " & Err.Description & " - " & Err.source
+    m_output = m_output & vbCrLf & "ERROR: " & Err.description
+    Debug.Print "Interpreter Error: " & Err.description & " - " & Err.source
     
     Dim col As Long
     ' For parser errors during execution, extract line from error message
     If m_currentLine = 0 And Err.Number = vbObjectError + 2000 Then
-        m_currentLine = ExtractLineFromError(Err.Description)
-        col = ExtractColumnFromError(Err.Description)
+        m_currentLine = ExtractLineFromError(Err.description)
+        col = ExtractColumnFromError(Err.description)
     End If
     
-    RaiseEvent OnError(Err.Description, m_currentLine, Err.source, col)
+    RaiseEvent OnError(Err.description, m_currentLine, Err.source, col)
      
 End Sub
 
@@ -852,11 +897,11 @@ End Sub
 ' Execute function declaration
 Private Sub ExecuteFunctionDeclaration(Node As CNode)
     Dim funcName As String
-    funcName = Node.id.name
+    funcName = Node.id.Name
     
     ' Create function object
     Dim func As New CFunction
-    func.name = funcName
+    func.Name = funcName
     Set func.params = Node.params
     Set func.Body = Node.FunctionBody
     Set func.closure = m_currentScope  ' Capture current scope
@@ -964,9 +1009,9 @@ Private Function EvaluateFunctionExpression(Node As CNode) As CValue
     Dim func As New CFunction
     
     If Not Node.id Is Nothing Then
-        func.name = Node.id.name
+        func.Name = Node.id.Name
     Else
-        func.name = "<anonymous>"
+        func.Name = "<anonymous>"
     End If
     
     Set func.params = Node.params
@@ -1069,7 +1114,7 @@ Private Sub ExecuteVarDeclaration(Node As CNode)
         
         ' Get variable name
         Dim varName As String
-        varName = decl.VarID.name
+        varName = decl.VarID.Name
         
         If debug_mode Then Debug.Print ">>> Declaring var: " & varName  ' <-- ADD THIS
         
@@ -1171,7 +1216,7 @@ Private Function EvaluateLogical(Node As CNode) As CValue
     Dim Left As CValue
     Set Left = EvaluateExpression(Node.Left)
     
-    Select Case Node.Operator
+    Select Case Node.operator
         Case "&&":
             ' AND: short-circuit if left is false
             If Not Left.ToBoolean() Then
@@ -1190,7 +1235,7 @@ Private Function EvaluateLogical(Node As CNode) As CValue
             
         Case Else:
             Err.Raise vbObjectError + 1005, "CInterpreter", _
-                      "Unknown logical operator: " & Node.Operator
+                      "Unknown logical operator: " & Node.operator
     End Select
     
     Set EvaluateLogical = result
@@ -1204,7 +1249,7 @@ Private Function EvaluateUnary(Node As CNode) As CValue
     Dim arg As CValue
     Set arg = EvaluateExpression(Node.Argument)
     
-    Select Case Node.Operator
+    Select Case Node.operator
         Case "!":
             ' Logical NOT
             result.vType = vtBoolean
@@ -1262,7 +1307,7 @@ Private Function EvaluateUnary(Node As CNode) As CValue
             
         Case Else:
             Err.Raise vbObjectError + 1006, "CInterpreter", _
-                      "Unsupported unary operator: " & Node.Operator
+                      "Unsupported unary operator: " & Node.operator
     End Select
     
     Set EvaluateUnary = result
@@ -1280,7 +1325,7 @@ Private Function EvaluateUpdate(Node As CNode) As CValue
     End If
     
     Dim varName As String
-    varName = Node.Argument.name
+    varName = Node.Argument.Name
     
     Dim oldValue As CValue
     Set oldValue = m_currentScope.GetVar(varName)
@@ -1291,7 +1336,7 @@ Private Function EvaluateUpdate(Node As CNode) As CValue
     ' Increment or decrement
     newValue.vType = vtNumber
     
-    If Node.Operator = "++" Then
+    If Node.operator = "++" Then
         newValue.numVal = numValue + 1
     Else
         newValue.numVal = numValue - 1
@@ -1401,7 +1446,7 @@ End Function
 
 ' Evaluate identifier (variable lookup)
 Private Function EvaluateIdentifier(Node As CNode) As CValue
-    Set EvaluateIdentifier = m_currentScope.GetVar(Node.name)
+    Set EvaluateIdentifier = m_currentScope.GetVar(Node.Name)
 End Function
 
       
@@ -1435,17 +1480,17 @@ Private Function EvaluateBinary(Node As CNode) As CValue
         End If
         
         ' Handle comparison operators - return BOOLEAN
-        If Node.Operator = "<" Or Node.Operator = ">" Or _
-           Node.Operator = "<=" Or Node.Operator = ">=" Or _
-           Node.Operator = "==" Or Node.Operator = "===" Or _
-           Node.Operator = "!=" Or Node.Operator = "!==" Then
+        If Node.operator = "<" Or Node.operator = ">" Or _
+           Node.operator = "<=" Or Node.operator = ">=" Or _
+           Node.operator = "==" Or Node.operator = "===" Or _
+           Node.operator = "!=" Or Node.operator = "!==" Then
             
             result.vType = vtBoolean
-            result.boolVal = EvaluateInt64Comparison(leftU64, rightU64, Node.Operator)
+            result.boolVal = EvaluateInt64Comparison(leftU64, rightU64, Node.operator)
         Else
             ' Arithmetic operators - return Int64
             result.vType = vtInt64
-            result.int64Val = EvaluateInt64Arithmetic(leftU64, rightU64, Node.Operator)
+            result.int64Val = EvaluateInt64Arithmetic(leftU64, rightU64, Node.operator)
         End If
         
         Set EvaluateBinary = result
@@ -1454,7 +1499,7 @@ Private Function EvaluateBinary(Node As CNode) As CValue
     
     ' === EXISTING CODE FOR REGULAR NUMBERS ===
     ' Perform operation
-    Select Case Node.Operator
+    Select Case Node.operator
         Case "+":
             ' Addition or string concatenation
             If Left.vType = vtString Or Right.vType = vtString Then
@@ -1528,10 +1573,53 @@ Private Function EvaluateBinary(Node As CNode) As CValue
             rshiftVal = CLng(Left.ToNumber())
             rshiftAmt = CLng(Right.ToNumber()) And 31
             result.numVal = rshiftVal \ (2# ^ rshiftAmt)
-    
+        
+        Case ">>>":  ' Unsigned right shift
+            result.vType = vtNumber
+            Dim urshiftVal As Long
+            Dim urshiftAmt As Long
+            urshiftVal = CLng(Left.ToNumber())
+            urshiftAmt = CLng(Right.ToNumber()) And 31
+            
+            ' Convert to unsigned, shift, convert back
+            Dim unsignedVal As Double
+            If urshiftVal < 0 Then
+                ' Negative value - convert to unsigned by adding 2^32
+                unsignedVal = CDbl(urshiftVal) + 4294967296#
+            Else
+                unsignedVal = CDbl(urshiftVal)
+            End If
+            
+            ' Perform unsigned shift
+            result.numVal = Fix(unsignedVal / (2# ^ urshiftAmt))
+            
+        Case "&"  ' Bitwise AND
+            result.vType = vtNumber
+            Dim andLeft As Long
+            Dim andRight As Long
+            andLeft = CLng(Left.ToNumber())
+            andRight = CLng(Right.ToNumber())
+            result.numVal = andLeft And andRight
+                        
+        Case "|"  ' Bitwise OR
+            result.vType = vtNumber
+            Dim orLeft As Long
+            Dim orRight As Long
+            orLeft = CLng(Left.ToNumber())
+            orRight = CLng(Right.ToNumber())
+            result.numVal = orLeft Or orRight
+             
+        Case "^"  ' Bitwise XOR
+            result.vType = vtNumber
+            Dim xorLeft As Long
+            Dim xorRight As Long
+            xorLeft = CLng(Left.ToNumber())
+            xorRight = CLng(Right.ToNumber())
+            result.numVal = xorLeft Xor xorRight
+                       
         Case Else:
             Err.Raise vbObjectError + 1002, "CInterpreter", _
-                      "Unsupported operator: " & Node.Operator
+                      "Unsupported operator: " & Node.operator
     End Select
     
     Set EvaluateBinary = result
@@ -1540,13 +1628,175 @@ End Function
 ' Evaluate assignment
 ' Update EvaluateAssignment to handle member expressions:
 Private Function EvaluateAssignment(Node As CNode) As CValue
-    ' Get the value to assign
     Dim Value As CValue
-    Set Value = EvaluateExpression(Node.Right)
+    Dim currentValue As CValue
+    Dim result As New CValue
     
-    ' Simple case: identifier = value
+    ' Check if this is a compound assignment (+=, -=, etc.)
+    Dim operator As String
+    operator = ""
+    On Error Resume Next
+    operator = Node.operator
+    On Error GoTo 0
+    
+    If operator = "" Or operator = "=" Then
+        ' Simple assignment: x = value
+        Set Value = EvaluateExpression(Node.Right)
+    Else
+        ' Compound assignment: x += value, x -= value, etc.
+        ' First get the current value of the left side
+        If Node.Left.tType = Identifier_Node Then
+            Set currentValue = m_currentScope.GetVar(Node.Left.Name)
+        ElseIf Node.Left.tType = MemberExpression_Node Then
+            Set currentValue = EvaluateMember(Node.Left)
+        Else
+            Err.Raise vbObjectError + 1003, "CInterpreter", _
+                      "Invalid assignment target"
+        End If
+        
+        ' Evaluate the right side
+        Dim rightValue As CValue
+        Set rightValue = EvaluateExpression(Node.Right)
+        
+        ' === Check if either operand is Int64 - handle separately ===
+        If currentValue.vType = vtInt64 Or rightValue.vType = vtInt64 Then
+            ' Auto-promote to Int64
+            Dim leftU64 As Currency
+            Dim rightU64 As Currency
+            
+            If currentValue.vType = vtInt64 Then
+                leftU64 = currentValue.int64Val
+            Else
+                leftU64 = currentValue.ToInt64()
+            End If
+            
+            If rightValue.vType = vtInt64 Then
+                rightU64 = rightValue.int64Val
+            Else
+                rightU64 = rightValue.ToInt64()
+            End If
+            
+            ' Perform Int64 operation
+            result.vType = vtInt64
+            
+            ' Map compound operator to base operator
+            Dim baseOp As String
+            Select Case operator
+                Case "+=": baseOp = "+"
+                Case "-=": baseOp = "-"
+                Case "*=": baseOp = "*"
+                Case "/=": baseOp = "/"
+                Case "%=": baseOp = "%"
+                Case "&=": baseOp = "&"
+                Case "|=": baseOp = "|"
+                Case "^=": baseOp = "^"
+                Case "<<=": baseOp = "<<"
+                Case ">>=": baseOp = ">>"
+                Case ">>>=": baseOp = ">>>"
+                Case Else:
+                    Err.Raise vbObjectError + 1003, "CInterpreter", _
+                              "Unsupported Int64 compound assignment: " & operator
+            End Select
+            
+            result.int64Val = EvaluateInt64Arithmetic(leftU64, rightU64, baseOp)
+            Set Value = result
+            GoTo DoAssignment
+        End If
+        
+        ' === Regular Number compound assignments ===
+        ' Perform the operation based on the compound operator
+        Select Case operator
+            Case "+=":
+                ' Addition or concatenation
+                If currentValue.vType = vtString Or rightValue.vType = vtString Then
+                    result.vType = vtString
+                    result.strVal = currentValue.ToString() & rightValue.ToString()
+                Else
+                    result.vType = vtNumber
+                    result.numVal = currentValue.ToNumber() + rightValue.ToNumber()
+                End If
+                Set Value = result
+                
+            Case "-=":
+                result.vType = vtNumber
+                result.numVal = currentValue.ToNumber() - rightValue.ToNumber()
+                Set Value = result
+                
+            Case "*=":
+                result.vType = vtNumber
+                result.numVal = currentValue.ToNumber() * rightValue.ToNumber()
+                Set Value = result
+                
+            Case "/=":
+                result.vType = vtNumber
+                result.numVal = currentValue.ToNumber() / rightValue.ToNumber()
+                Set Value = result
+                
+            Case "%=":
+                result.vType = vtNumber
+                result.numVal = currentValue.ToNumber() Mod rightValue.ToNumber()
+                Set Value = result
+                
+            Case "&=":
+                result.vType = vtNumber
+                result.numVal = CLng(currentValue.ToNumber()) And CLng(rightValue.ToNumber())
+                Set Value = result
+                
+            Case "|=":
+                result.vType = vtNumber
+                result.numVal = CLng(currentValue.ToNumber()) Or CLng(rightValue.ToNumber())
+                Set Value = result
+                
+            Case "^=":
+                result.vType = vtNumber
+                result.numVal = CLng(currentValue.ToNumber()) Xor CLng(rightValue.ToNumber())
+                Set Value = result
+                
+            Case "<<=":
+                result.vType = vtNumber
+                Dim lshiftVal As Long
+                Dim lshiftAmt As Long
+                lshiftVal = CLng(currentValue.ToNumber())
+                lshiftAmt = CLng(rightValue.ToNumber()) And 31
+                result.numVal = lshiftVal * (2# ^ lshiftAmt)
+                Set Value = result
+                
+            Case ">>=":
+                result.vType = vtNumber
+                Dim rshiftVal As Long
+                Dim rshiftAmt As Long
+                rshiftVal = CLng(currentValue.ToNumber())
+                rshiftAmt = CLng(rightValue.ToNumber()) And 31
+                result.numVal = rshiftVal \ (2# ^ rshiftAmt)
+                Set Value = result
+              
+            Case ">>>=":
+                result.vType = vtNumber
+                Dim urshiftVal2 As Long
+                Dim urshiftAmt2 As Long
+                urshiftVal2 = CLng(currentValue.ToNumber())
+                urshiftAmt2 = CLng(rightValue.ToNumber()) And 31
+                
+                Dim unsignedVal2 As Double
+                If urshiftVal2 < 0 Then
+                    unsignedVal2 = CDbl(urshiftVal2) + 4294967296#
+                Else
+                    unsignedVal2 = CDbl(urshiftVal2)
+                End If
+                
+                result.numVal = Fix(unsignedVal2 / (2# ^ urshiftAmt2))
+                Set Value = result
+                
+            Case Else:
+                Err.Raise vbObjectError + 1003, "CInterpreter", _
+                          "Unsupported compound assignment operator: " & operator
+        End Select
+    End If
+    
+DoAssignment:
+    ' Perform the assignment
     If Node.Left.tType = Identifier_Node Then
-        m_currentScope.SetVar Node.Left.name, Value
+        m_currentScope.SetVar Node.Left.Name, Value
     ElseIf Node.Left.tType = MemberExpression_Node Then
         ' Member assignment: obj.prop = value or arr[0] = value
         AssignMember Node.Left, Value
@@ -1593,7 +1843,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
     ' === NEW: Check for global functions (no 'this') ===
     If Node.Callee.tType = Identifier_Node Then
         Dim funcName As String
-        funcName = Node.Callee.name
+        funcName = Node.Callee.Name
         
         If IsGlobalFunction(funcName) Then
             ' Evaluate arguments
@@ -1617,16 +1867,16 @@ Private Function EvaluateCall(Node As CNode) As CValue
         
         If Node.Callee.Object.tType = Identifier_Node Then
 
-            If Node.Callee.Object.name = "console" Then
-                If Node.Callee.prop.name = "log" Then
+            If Node.Callee.Object.Name = "console" Then
+                If Node.Callee.prop.Name = "log" Then
                     Set result = HandleConsoleLog(Node.Arguments)  'collection of CNodes still need to evalexpression
                     depth = depth - 1
                     Set EvaluateCall = result
                     Exit Function
                 End If
-            ElseIf Node.Callee.Object.name = "Math" Then
+            ElseIf Node.Callee.Object.Name = "Math" Then
                 ' Math method call
-                methodName = Node.Callee.prop.name
+                methodName = Node.Callee.prop.Name
                 
                 If IsMathMethod(methodName) Then
                     ' Evaluate arguments
@@ -1641,9 +1891,9 @@ Private Function EvaluateCall(Node As CNode) As CValue
                     Set EvaluateCall = result
                     Exit Function
                 End If
-            ElseIf Node.Callee.Object.name = "JSON" Then
+            ElseIf Node.Callee.Object.Name = "JSON" Then
                 ' === JSON method call ===
-                methodName = Node.Callee.prop.name
+                methodName = Node.Callee.prop.Name
                 
                 If IsJSONMethod(methodName) Then
                     ' Evaluate arguments
@@ -1658,13 +1908,58 @@ Private Function EvaluateCall(Node As CNode) As CValue
                     Set EvaluateCall = result
                     Exit Function
                 End If
-            ElseIf Node.Callee.Object.name = "Date" Then
+            ElseIf Node.Callee.Object.Name = "Date" Then
                 ' === Date static methods ===
-                methodName = Node.Callee.prop.name
+                methodName = Node.Callee.prop.Name
                 
                 If methodName = "now" Then
                     result.vType = vtNumber
                     result.numVal = DateDiff("s", #1/1/1970#, Now) * 1000
+                    depth = depth - 1
+                    Set EvaluateCall = result
+                    Exit Function
+                End If
+            ElseIf Node.Callee.Object.Name = "String" Then
+                ' === String static methods ===
+                methodName = Node.Callee.prop.Name
+                
+                If methodName = "fromCharCode" Then
+                    ' String.fromCharCode(code1, code2, ...)
+                    ' Evaluate arguments
+                    Dim j As Long
+                    For j = 1 To Node.Arguments.count
+                        Set arg = Node.Arguments(j)
+                        argValues.add EvaluateExpression(arg)
+                    Next
+                    
+                    ' Build string from character codes
+                    Dim charStr As String
+                    Dim charCode As Long
+                    Dim val As CValue
+                    
+                    charStr = ""
+                    For j = 1 To argValues.count
+                        Set val = argValues(j)
+                        charCode = CLng(val.ToNumber())
+                        If charCode >= 0 And charCode <= 65535 Then
+                            charStr = charStr & ChrW(charCode)
+                        End If
+                    Next
+                    
+                    ' Audit logging
+                    If AuditMode Then
+                        Dim codeList As String
+                        codeList = ""
+                        For j = 1 To argValues.count
+                            Set val = argValues(j)
+                            codeList = codeList & val.ToString()
+                            If j < argValues.count Then codeList = codeList & ","
+                        Next
+                        RaiseAudit aeDecode, "String.fromCharCode(" & codeList & ") -> " & charStr
+                    End If
+                    
+                    result.vType = vtString
+                    result.strVal = charStr
                     depth = depth - 1
                     Set EvaluateCall = result
                     Exit Function
@@ -1687,7 +1982,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
         
         ' === Check if it's an array method call ===
         If objVal.vType = vtArray Then
-            methodName = Node.Callee.prop.name
+            methodName = Node.Callee.prop.Name
             
             If IsArrayMethod(methodName) Then
                 ' Evaluate arguments
@@ -1706,7 +2001,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
         
         ' === Check if it's a string method call ===
         If objVal.vType = vtString Then
-            methodName = Node.Callee.prop.name
+            methodName = Node.Callee.prop.Name
             
             If IsStringMethod(methodName) Then
                 ' Evaluate arguments
@@ -1724,7 +2019,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
         End If
         
         If objVal.vType = vtObject Then
-            methodName = Node.Callee.prop.name
+            methodName = Node.Callee.prop.Name
 
             If IsDateMethod(methodName) Then
                 ' Evaluate arguments
@@ -1744,7 +2039,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
         ' === Check if it's a COM method call ===
         ' (objVal already evaluated above - reuse it!)
         If objVal.vType = vtCOMObject Then
-            methodName = Node.Callee.prop.name
+            methodName = Node.Callee.prop.Name
             
             Set result = CallCOMMethod(objVal.objVal, methodName, Node.Arguments)
             depth = depth - 1  ' ? ADD THIS
@@ -1754,7 +2049,7 @@ Private Function EvaluateCall(Node As CNode) As CValue
         
         ' === User-defined object methods (.THIS SUPPORT IS THE KEY!) ===
         If objVal.vType = vtObject Then
-            methodName = Node.Callee.prop.name
+            methodName = Node.Callee.prop.Name
             If dbg_mode Then Debug.Print ">>> Looking for method '" & methodName & "' on object"
             
             ' Get the method from the object
@@ -1827,6 +2122,8 @@ Private Function EvaluateMember(Node As CNode) As CValue
         Dim propValue As CValue
         Set propValue = EvaluateExpression(Node.prop)
         
+        RaiseAudit aeBracketAccess, obj.ToString() & "[" & propValue.ToString() & "]"
+        
         If obj.vType = vtArray Then
             ' Array access
             Dim index As Long
@@ -1858,7 +2155,7 @@ Private Function EvaluateMember(Node As CNode) As CValue
         End If
     Else
         ' Static: obj.prop
-        propName = Node.prop.name
+        propName = Node.prop.Name
     End If
     
     ' === NEW: Handle COM objects ===
@@ -2187,7 +2484,7 @@ Private Function EvaluateObjectExpression(Node As CNode) As CValue
         ' Get property key
         Dim key As String
         If prop.PropKey.tType = Identifier_Node Then
-            key = prop.PropKey.name
+            key = prop.PropKey.Name
         ElseIf prop.PropKey.tType = Literal_Node Then
             key = CStr(prop.PropKey.Value)
         Else
@@ -2239,7 +2536,7 @@ Private Sub AssignMember(memberNode As CNode, Value As CValue)
         End If
     Else
         ' Static: obj.prop
-        propName = memberNode.prop.name
+        propName = memberNode.prop.Name
     End If
     
     ' === NEW: Handle COM objects ===
@@ -2305,6 +2602,18 @@ Private Function EvaluateInt64Arithmetic(leftVal As Currency, rightVal As Curren
             
         Case ">>":
             Set u64Result = u64Left.rshift(u64Right)
+        
+        Case ">>>":
+            ' For Int64, force unsigned mode for >>> operation
+            Dim u64Temp As New ULong64
+            u64Temp.mode = mUnsigned  ' Force unsigned
+            u64Temp.rawValue = leftVal
+            
+            Dim u64Amt As New ULong64
+            u64Amt.mode = mUnsigned
+            u64Amt.rawValue = rightVal
+            
+            Set u64Result = u64Temp.rshift(u64Amt)
             
         Case Else:
             Err.Raise vbObjectError + 1010, "CInterpreter", _
@@ -2616,6 +2925,30 @@ Private Function CallCOMMethod(comObj As Object, methodName As String, args As C
     Dim vArgs() As Variant
     Dim i As Long
     
+    ' Audit logging
+    If AuditMode Then
+        Dim objType As String
+        On Error Resume Next
+        objType = TypeName(comObj)
+        On Error GoTo ErrorHandler
+        
+        Dim auditMsg As String
+        auditMsg = objType & "." & methodName & "("
+        
+        ' Add first argument if present
+        If args.count > 0 Then
+            Dim firstArg As CNode
+            Set firstArg = args(1)
+            Dim firstArgVal As CValue
+            Set firstArgVal = EvaluateExpression(firstArg)
+            auditMsg = auditMsg & Chr(34) & firstArgVal.ToString() & Chr(34)
+        End If
+        auditMsg = auditMsg & ")"
+        
+        RaiseAudit aeCOMCall, auditMsg
+    End If
+    
+    
     If args.count > 0 Then
         ReDim vArgs(1 To args.count)
         For i = 1 To args.count
@@ -2787,11 +3120,11 @@ Private Function EvaluateNewExpression(Node As CNode) As CValue
     ' Check if it's new Error()
     If Node.Callee.tType = Identifier_Node Then
         
-        If Node.Callee.name = "Date" Then
+        If Node.Callee.Name = "Date" Then
             Set result = CreateDateObject(Node.Arguments)
             Set EvaluateNewExpression = result
             Exit Function
-        ElseIf Node.Callee.name = "Error" Then
+        ElseIf Node.Callee.Name = "Error" Then
             ' new Error([message])
             message = "Error"
             
@@ -2804,13 +3137,87 @@ Private Function EvaluateNewExpression(Node As CNode) As CValue
             Set result = CreateErrorObject(message)
             Set EvaluateNewExpression = result
             Exit Function
+        ElseIf Node.Callee.Name = "Function" Then
+            ' new Function([arg1, arg2, ...], body)
+            ' Last argument is the body, rest are parameter names
+            
+            Dim funcBody As String
+            Dim funcParams As String
+            Dim funcArg As CValue
+            Dim funcSource As String
+            Dim funcAST As CNode
+            Dim newFunc As New CFunction
+            Dim i As Long
+            Dim paramName As CNode
+            
+            If Node.Arguments.count = 0 Then
+                ' new Function() - empty function
+                funcBody = ""
+                funcParams = ""
+            ElseIf Node.Arguments.count = 1 Then
+                ' new Function(body) - just body, no params
+                Set funcArg = EvaluateExpression(Node.Arguments(1))
+                funcBody = funcArg.ToString()
+                funcParams = ""
+            Else
+                ' new Function(arg1, arg2, ..., body)
+                ' Last argument is body, rest are parameter names
+                funcParams = ""
+                For i = 1 To Node.Arguments.count - 1
+                    Set funcArg = EvaluateExpression(Node.Arguments(i))
+                    funcParams = funcParams & funcArg.ToString()
+                    If i < Node.Arguments.count - 1 Then funcParams = funcParams & ", "
+                Next
+                
+                ' Get the body (last argument)
+                Set funcArg = EvaluateExpression(Node.Arguments(Node.Arguments.count))
+                funcBody = funcArg.ToString()
+            End If
+            
+            ' Audit event - log before parsing
+            RaiseAudit aeFunctionConstructor, funcBody
+            
+            ' Build complete function source
+            funcSource = "function(" & funcParams & ") { " & funcBody & " }"
+            
+            ' Parse the function expression
+            On Error GoTo FunctionParseError
+            Set funcAST = m_parser.ParseSingleExpression(funcSource)
+            On Error GoTo 0
+            
+            ' Verify it's a function expression node
+            If funcAST.tType <> FunctionExpression_Node Then
+                Err.Raise vbObjectError + 1015, "CInterpreter", _
+                          "Function constructor: parser did not return function expression"
+            End If
+            
+            Set newFunc.params = funcAST.params
+            
+            ' Set the function body (BlockStatement node)
+            Set newFunc.Body = funcAST.FunctionBody
+            
+            ' Set closure to current scope
+            Set newFunc.closure = m_currentScope
+            
+            ' Optional: set function name (anonymous)
+            newFunc.Name = ""
+            
+            ' Return as function value
+            result.vType = vtfunction
+            Set result.objVal = newFunc
+            Set EvaluateNewExpression = result
+            Exit Function
+        
+FunctionParseError:
+            Err.Raise vbObjectError + 1016, "CInterpreter", _
+                      "Function constructor: failed to parse function body - " & Err.description
         End If
 
     End If
     
     ' Check if it's new ActiveXObject()
     If Node.Callee.tType = Identifier_Node Then
-        If Node.Callee.name = "ActiveXObject" Then
+        If Node.Callee.Name = "ActiveXObject" Then
             ' Check safety
             If UseSafeSubset Then
                 Err.Raise vbObjectError + 1012, "CInterpreter", _
@@ -2845,6 +3252,8 @@ Private Function EvaluateNewExpression(Node As CNode) As CValue
             ' Create the COM object
             On Error GoTo CreateError
             
+            RaiseAudit aeActiveX, progId.strVal
+            
             Set comObj = CreateObject(progId.strVal)
             On Error GoTo 0
             
@@ -2857,7 +3266,7 @@ Private Function EvaluateNewExpression(Node As CNode) As CValue
             
 CreateError:
             Err.Raise vbObjectError + 1015, "CInterpreter", _
-                      "Failed to create ActiveXObject '" & progId.strVal & "': " & Err.Description
+                      "Failed to create ActiveXObject '" & progId.strVal & "': " & Err.description
         End If
     End If
     
@@ -2868,7 +3277,7 @@ End Function
 
 Sub TestActiveXObject()
     Dim interp As New CInterpreter
-    Dim Code As String
+    Dim code As String
     
     Debug.Print "=== Testing new ActiveXObject (Unsafe Mode) ==="
     Debug.Print ""
@@ -2876,13 +3285,13 @@ Sub TestActiveXObject()
     ' Test 1: Safe mode blocks it
     Debug.Print "Test 1: Safe mode (should fail)"
     interp.UseSafeSubset = True
-    Code = "var fso = new ActiveXObject('Scripting.FileSystemObject');"
+    code = "var fso = new ActiveXObject('Scripting.FileSystemObject');"
     
     On Error Resume Next
-    interp.Execute Code
+    interp.Execute code
     If Err.Number <> 0 Then
         Debug.Print "Expected: Error (safe mode)"
-        Debug.Print "Got: " & Err.Description
+        Debug.Print "Got: " & Err.description
         Err.Clear
     Else
         Debug.Print "ERROR: Should have failed in safe mode!"
@@ -2895,10 +3304,10 @@ Sub TestActiveXObject()
     interp.UseSafeSubset = False
     interp.ClearOutput
     
-    Code = "var fso = new ActiveXObject('Scripting.FileSystemObject');" & vbCrLf & _
+    code = "var fso = new ActiveXObject('Scripting.FileSystemObject');" & vbCrLf & _
            "var tempFolder = fso.GetSpecialFolder(2);" & vbCrLf & _
            "console.log(tempFolder.Path);"
-    interp.Execute Code
+    interp.Execute code
     Debug.Print "Expected: (Temp path)"
     Debug.Print "Got: " & Trim$(interp.GetOutput())
     interp.ClearOutput
@@ -2906,10 +3315,10 @@ Sub TestActiveXObject()
     
     ' Test 3: WScript.Shell
     Debug.Print "Test 3: Unsafe mode - WScript.Shell"
-    Code = "var shell = new ActiveXObject('WScript.Shell');" & vbCrLf & _
+    code = "var shell = new ActiveXObject('WScript.Shell');" & vbCrLf & _
            "var env = shell.Environment('Process');" & vbCrLf & _
            "console.log(env.Item('COMPUTERNAME'));"
-    interp.Execute Code
+    interp.Execute code
     Debug.Print "Expected: (Computer name)"
     Debug.Print "Got: " & Trim$(interp.GetOutput())
     interp.ClearOutput
@@ -2917,9 +3326,9 @@ Sub TestActiveXObject()
     
     ' Test 4: ADODB.Connection (if you dare!)
     Debug.Print "Test 4: Unsafe mode - ADODB.Connection"
-    Code = "var conn = new ActiveXObject('ADODB.Connection');" & vbCrLf & _
+    code = "var conn = new ActiveXObject('ADODB.Connection');" & vbCrLf & _
            "console.log(typeof conn);"
-    interp.Execute Code
+    interp.Execute code
     Debug.Print "Expected: object"
     Debug.Print "Got: " & Trim$(interp.GetOutput())
     interp.ClearOutput
@@ -2927,13 +3336,13 @@ Sub TestActiveXObject()
     
     ' Test 5: Invalid ProgID
     Debug.Print "Test 5: Invalid ProgID (should fail)"
-    Code = "var bad = new ActiveXObject('This.Does.Not.Exist');"
+    code = "var bad = new ActiveXObject('This.Does.Not.Exist');"
     
     On Error Resume Next
-    interp.Execute Code
+    interp.Execute code
     If Err.Number <> 0 Then
         Debug.Print "Expected: Error (invalid ProgID)"
-        Debug.Print "Got: " & Err.Description
+        Debug.Print "Got: " & Err.description
         Err.Clear
     Else
         Debug.Print "ERROR: Should have failed with invalid ProgID!"
@@ -2943,13 +3352,13 @@ Sub TestActiveXObject()
     
     ' Test 6: Missing argument
     Debug.Print "Test 6: Missing argument (should fail)"
-    Code = "var bad = new ActiveXObject();"
+    code = "var bad = new ActiveXObject();"
     
     On Error Resume Next
-    interp.Execute Code
+    interp.Execute code
     If Err.Number <> 0 Then
         Debug.Print "Expected: Error (missing argument)"
-        Debug.Print "Got: " & Err.Description
+        Debug.Print "Got: " & Err.description
         Err.Clear
     Else
         Debug.Print "ERROR: Should have failed with missing argument!"
@@ -4038,6 +4447,7 @@ Private Function CallGlobalFunction(funcName As String, args As Collection) As C
                 result.strVal = ""
             Else
                 Set arg = args(1)
+                RaiseAudit aeDecode, "decodeURIComponent(" & arg.ToString() & ")"
                 result.vType = vtString
                 result.strVal = DecodeURIComponent(arg.ToString())
             End If
@@ -4060,6 +4470,7 @@ Private Function CallGlobalFunction(funcName As String, args As Collection) As C
                 result.strVal = ""
             Else
                 Set arg = args(1)
+                RaiseAudit aeDecode, "decodeURI(" & arg.ToString() & ")"
                 result.vType = vtString
                 result.strVal = DecodeURIComponent(arg.ToString())  ' Same implementation
             End If
@@ -4082,6 +4493,7 @@ Private Function CallGlobalFunction(funcName As String, args As Collection) As C
                 result.strVal = ""
             Else
                 Set arg = args(1)
+                RaiseAudit aeDecode, "unescape(" & arg.ToString() & ")"
                 result.vType = vtString
                 result.strVal = UnescapeString(arg.ToString())
             End If
@@ -4093,6 +4505,8 @@ Private Function CallGlobalFunction(funcName As String, args As Collection) As C
             Else
                 Set arg = args(1)
                 str = arg.ToString()
+                
+                RaiseAudit aeEval, str
                 
                 ' Use our existing Eval mechanism
                 On Error Resume Next
@@ -4158,7 +4572,7 @@ Private Sub ExecuteTryStatement(Node As CNode)
     
     If Err.Number <> 0 Then
         hadError = True
-        errorMsg = Err.Description
+        errorMsg = Err.description
         errorNumber = Err.Number
         Err.Clear
     End If
@@ -4191,7 +4605,7 @@ Private Sub ExecuteTryStatement(Node As CNode)
         errorValue.objectKeys.add "name", "name"
         
         ' Define error in catch scope
-        catchScope.DefineVar Node.TryHandler.param.name, errorValue
+        catchScope.DefineVar Node.TryHandler.param.Name, errorValue
         
         ' Switch to catch scope
         Dim savedScope As CScope
@@ -4296,7 +4710,7 @@ Private Sub ExecuteSwitchStatement(Node As CNode)
     
 ErrorHandler:
     Err.Raise Err.Number, "ExecuteSwitchStatement", _
-              "Error in switch statement at line " & Node.LineNumber & ": " & Err.Description
+              "Error in switch statement at line " & Node.LineNumber & ": " & Err.description
 End Sub
 
 
@@ -4382,7 +4796,7 @@ Public Function SetNextStatement(targetLine As Long) As Boolean
     Exit Function
     
 ErrorHandler:
-    Debug.Print ">>> SetNextStatement error: " & Err.Description
+    Debug.Print ">>> SetNextStatement error: " & Err.description
     SetNextStatement = False
 End Function
 
@@ -4646,7 +5060,7 @@ Private Function CanSetNextStatementTo(targetLine As Long) As Boolean
     Exit Function
     
 ErrorHandler:
-    Debug.Print ">>> CanSetNextStatementTo error: " & Err.Description & " (line " & Erl & ")"
+    Debug.Print ">>> CanSetNextStatementTo error: " & Err.description & " (line " & Erl & ")"
     CanSetNextStatementTo = False
 End Function
 
@@ -4905,7 +5319,7 @@ Public Function CallJSFunction(func As CValue, args As Collection, Optional this
             If i <= fn.params.count Then
                 Dim paramNode As CNode
                 Set paramNode = fn.params(i)
-                funcScope.DefineVar paramNode.name, args(i)
+                funcScope.DefineVar paramNode.Name, args(i)
             End If
         Next
     End If
@@ -4929,7 +5343,7 @@ Public Function CallJSFunction(func As CValue, args As Collection, Optional this
     
     ' *** ADD DEBUGGER HOOK - Push frame AFTER scope switch ***
     If m_debugMode Then
-        DebugPushFrame fn.name, args.count
+        DebugPushFrame fn.Name, args.count
     End If
     
     ' Execute function body
@@ -4978,7 +5392,7 @@ ErrorHandler:
 End Function
 
 ' Evaluate JavaScript and return as VB COM object (if it's a JS object)
-Public Function EvalAsObject(Code As String) As Object
+Public Function EvalAsObject(code As String) As Object
     On Error GoTo ErrorHandler
     
     Const dbg_mode As Boolean = False
@@ -4990,7 +5404,7 @@ Public Function EvalAsObject(Code As String) As Object
     
     ' Evaluate the expression
     Dim result As CValue
-    Set result = Eval(Code)
+    Set result = Eval(code)
     
     If result Is Nothing Then
         Set EvalAsObject = Nothing
@@ -5007,9 +5421,9 @@ Public Function EvalAsObject(Code As String) As Object
         
         ' Use variable name for objects, direct reference for functions
         If result.vType = vtObject Then
-            jsObj.InitFromVarName Code, Me
+            jsObj.InitFromVarName code, Me
         Else
-            jsObj.InitFromCValue result, Me, Code
+            jsObj.InitFromCValue result, Me, code
         End If
         
         ' Wrap in dynproxy
@@ -5026,7 +5440,7 @@ Public Function EvalAsObject(Code As String) As Object
     Exit Function
     
 ErrorHandler:
-    Debug.Print ">>> EvalAsObject ERROR: " & Err.Description
+    Debug.Print ">>> EvalAsObject ERROR: " & Err.description
     Set EvalAsObject = Nothing
 End Function
 
@@ -5055,7 +5469,7 @@ Public Function EvalAsVariant(varName As String) As Variant
     Exit Function
     
 ErrorHandler:
-    Debug.Print ">>> EvalAsVariant ERROR: " & Err.Description
+    Debug.Print ">>> EvalAsVariant ERROR: " & Err.description
     EvalAsVariant = Empty
 End Function
 
@@ -5342,7 +5756,7 @@ Private Function CreateDateObject(args As Collection) As CValue
     toStringFunc.vType = vtfunction
     ' Crear función que retorna la fecha como string
     Dim toStrFn As New CFunction
-    toStrFn.name = "toString"
+    toStrFn.Name = "toString"
     Set toStrFn.Body = Nothing  ' Método nativo
     Set toStringFunc.objVal = toStrFn
     
@@ -5353,7 +5767,7 @@ Private Function CreateDateObject(args As Collection) As CValue
     Dim getTimeFunc As New CValue
     getTimeFunc.vType = vtfunction
     Dim getTimeFn As New CFunction
-    getTimeFn.name = "getTime"
+    getTimeFn.Name = "getTime"
     Set getTimeFn.Body = Nothing
     Set getTimeFunc.objVal = getTimeFn
     
