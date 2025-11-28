@@ -86,6 +86,33 @@ Public Event ConsoleLog(ByVal msg As String)
 
 Const debug_mode As Boolean = False
 
+'example low level api to add a global:
+    'Dim config As CValue
+    'Set config = interp.CreateJSObject()
+    '
+    'Dim str As CValue
+    'Set str = New CValue
+    'str.vType = vtString
+    'str.strVal = "debug mode"
+    '
+    'Call config.SetProperty("mode", str)
+    'interp.SetVariable "appConfig", config
+
+Public Function CreateJSObject() As CValue
+    Dim result As New CValue
+    result.vType = vtObject
+    Set result.objectProps = New Collection
+    Set result.objectKeys = New Collection
+    Set CreateJSObject = result
+End Function
+
+Public Function CreateJSArray() As CValue
+    Dim result As New CValue
+    result.vType = vtArray
+    Set result.arrayVal = New Collection
+    Set CreateJSArray = result
+End Function
+
 Function AuditEventToStr(ae As enumAuditEvents) As String
     
     Dim categoryName As String
@@ -2907,7 +2934,7 @@ Private Function CallCOMMethod(comObj As Object, methodName As String, args As C
             vArgs(i - 1) = CValueToVariant(argVal)
         Next
     Else
-        ReDim vArgs(0 To -1)  ' Empty array
+        'Empty array do nothing
     End If
     
     ' Try different invoke types - order matters!

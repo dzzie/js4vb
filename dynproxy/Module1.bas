@@ -1,6 +1,7 @@
 Attribute VB_Name = "Module1"
 Option Explicit
 
+Public Declare Sub IPCDebugMode Lib "dynproxy.dll" (Optional ByVal enabled As Long = 1)
 Public Declare Function CreateProxyForProgIDRaw Lib "dynproxy.dll" (ByVal progId As Long, ByVal resolverDisp As Long) As Long
 Public Declare Function CreateProxyForObjectRaw Lib "dynproxy.dll" (ByVal innerDispPtr As Long, ByVal resolverDispPtr As Long) As Long
 Public Declare Sub ReleaseDispatchRaw Lib "dynproxy.dll" (ByVal pDisp As Long)
@@ -67,11 +68,11 @@ Private Sub BuildTableIfNeeded()
 End Sub
 
 ' Core update over bytes
-Public Function CRC32_Update(ByVal crc_in As Long, ByRef bytes() As Byte, ByVal offset As Long, ByVal count As Long) As Long
+Public Function CRC32_Update(ByVal crc_in As Long, ByRef bytes() As Byte, ByVal offset As Long, ByVal Count As Long) As Long
     BuildTableIfNeeded
     Dim i As Long, b As Long, crc As Long
     crc = crc_in
-    For i = 0 To count - 1
+    For i = 0 To Count - 1
         b = bytes(offset + i) And &HFF&
         crc = CRC32_Table((crc Xor b) And &HFF&) Xor ((crc And &HFFFFFFFF) \ &H100)
     Next

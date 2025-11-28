@@ -27,6 +27,7 @@ Public Declare Function CreateProxyForObjectRawEx Lib "dynproxy.dll" (ByVal inne
 Public Declare Sub SetProxyOverride Lib "dynproxy.dll" (ByVal proxyPtr As Long, ByVal nameBSTR As Long, ByVal dispid As Long)
 Public Declare Function ComTypeName Lib "dynproxy.dll" (ByVal obj As IUnknown) As Variant
 Public Declare Sub SendDbgMsg Lib "dynproxy.dll" (ByVal msg As String)   'to the PersistantDbgPrint window
+Public Declare Sub IPCDebugMode Lib "dynproxy.dll" (Optional ByVal enabled As Long = 1)
 
 Public Declare Function CallByNameEx Lib "dynproxy.dll" ( _
     ByVal obj As IUnknown, _

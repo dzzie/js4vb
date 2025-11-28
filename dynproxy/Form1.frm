@@ -65,8 +65,10 @@ Private Sub Form_Load()
     
     If hLib = 0 Then
         List1.AddItem "Could not find dynproxy.dll"
-        Command1.Enabled = False
-        Command2.Enabled = False
+        Command1.enabled = False
+        Command2.enabled = False
+    Else
+        IPCDebugMode
     End If
     
     'TestDefaultProp 'works

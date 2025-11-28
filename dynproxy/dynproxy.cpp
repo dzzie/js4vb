@@ -24,6 +24,7 @@ void msgf(const char*, ...);
 
 bool Warned = false;
 HWND hServer = 0;
+int DEBUG_MODE = 0;
 
 static BSTR SysAllocStringFromW(const std::wstring& w) {
     return SysAllocStringLen(w.data(), (UINT)w.size());
@@ -48,7 +49,7 @@ HWND regFindWindow(void) {
     return ret;
 }
 
-void FindVBWindow() {
+int FindVBWindow() {
     const char* vbIDEClassName = "ThunderFormDC";
     const char* vbEXEClassName = "ThunderRT6FormDC";
     const char* vbEXEClassName2 = "ThunderRT6Form";
@@ -75,10 +76,13 @@ void FindVBWindow() {
         }
     }
 
+	return (int)hServer;
+
 }
 
 int msg(char* Buffer) {
 
+	if (!DEBUG_MODE) return 0;
     if (!IsWindow(hServer)) hServer = 0;
     if (hServer == 0) FindVBWindow();
 
@@ -97,7 +101,9 @@ int msg(char* Buffer) {
 
 void msgf(const char* format, ...)
 {
-    DWORD dwErr = GetLastError();
+    
+	if (!DEBUG_MODE) return;
+	DWORD dwErr = GetLastError();
 
     if (format) {
         char buf[1024];
@@ -131,6 +137,8 @@ extern "C" void msgf(const char* format, ...) {
 
 static void DBGW(const wchar_t* fmt, ...) {
     wchar_t wbuf[1024];
+
+	if (!DEBUG_MODE) return;
     va_list ap; va_start(ap, fmt);
     StringCchVPrintfW(wbuf, _countof(wbuf), fmt, ap);
     va_end(ap);
@@ -144,6 +152,8 @@ static void DBGW(const wchar_t* fmt, ...) {
 
 static void DBGA(const char* fmt, ...) {
     char buf[2048];
+
+	if (!DEBUG_MODE) return;
     va_list ap; va_start(ap, fmt);
     _vsnprintf_s(buf, _countof(buf), _TRUNCATE, fmt, ap);
     va_end(ap);
@@ -901,4 +911,80 @@ HRESULT __stdcall CallByNameEx(
 	msgf("[CallByNameEx] Exit hr=0x%08X", hr);
 
 	return hr;
+}
+
+extern "C" __declspec(dllexport)
+void __stdcall IPCDebugMode(int enabled) { DEBUG_MODE = enabled; }
+
+extern "C" __declspec(dllexport) HRESULT __stdcall StartDbgWnd(int dbgEnabled)
+{
+
+	DEBUG_MODE = dbgEnabled;
+	if (FindVBWindow() != 0) return 0;
+
+	STARTUPINFOA si = { sizeof(si) };
+	PROCESS_INFORMATION pi = { 0 };
+	char dllPath[MAX_PATH];
+	char exePath[MAX_PATH];
+
+	// Get the DLL's full path
+	HMODULE hModule = NULL;
+	if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+		GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+		(LPCSTR)&StartDbgWnd, &hModule)) {
+		msgf("[StartDbgWnd] Failed to get module handle: %d", GetLastError());
+		return E_FAIL;
+	}
+
+	if (!GetModuleFileNameA(hModule, dllPath, MAX_PATH)) {
+		msgf("[StartDbgWnd] Failed to get DLL path: %d", GetLastError());
+		return E_FAIL;
+	}
+
+	// Strip filename to get directory
+	char* lastSlash = strrchr(dllPath, '\\');
+	if (!lastSlash) {
+		msgf("[StartDbgWnd] Invalid DLL path: %s", dllPath);
+		return E_FAIL;
+	}
+
+	*(lastSlash + 1) = '\0';  // Keep the trailing backslash
+
+	// Build path to dbgwindow.exe
+	strcpy_s(exePath, MAX_PATH, dllPath);
+	strcat_s(exePath, MAX_PATH, "dbgwindow.exe");
+
+	msgf("[StartDbgWnd] Looking for: %s", exePath);
+
+	// Check if file exists
+	if (GetFileAttributesA(exePath) == INVALID_FILE_ATTRIBUTES) {
+		msgf("[StartDbgWnd] File not found: %s", exePath);
+		return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+	}
+
+	if (!CreateProcessA(exePath, NULL, NULL, NULL, FALSE, 0, NULL, dllPath, &si, &pi))
+	{
+		msgf("[StartDbgWnd] CreateProcess failed: %d", GetLastError());
+		return HRESULT_FROM_WIN32(GetLastError());
+	}
+
+	msgf("[StartDbgWnd] Launched PID=%d, waiting for init...", pi.dwProcessId);
+
+	// Wait for the app to be ready (up to 5 seconds)
+	DWORD result = WaitForInputIdle(pi.hProcess, 5000);
+
+	if (result == 0) {
+		msgf("[StartDbgWnd] Window ready");
+	}
+	else if (result == WAIT_TIMEOUT) {
+		msgf("[StartDbgWnd] WARNING: Timeout waiting for window");
+	}
+	else {
+		msgf("[StartDbgWnd] WARNING: WaitForInputIdle failed");
+	}
+
+	CloseHandle(pi.hThread);
+	CloseHandle(pi.hProcess);
+
+	return S_OK;
 }

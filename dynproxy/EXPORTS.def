@@ -8,3 +8,5 @@ EXPORTS
     ComTypeName
     SendDbgMsg
 	CallByNameEx
+	IPCDebugMode
+	StartDbgWnd

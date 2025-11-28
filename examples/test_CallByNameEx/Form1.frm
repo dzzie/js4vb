@@ -21,7 +21,8 @@ Option Explicit
 'if the function returns an object you need to use a set=
 'if you call the function twice to figure it out, you just called the function twice which isnt always right
 
-
+Private Declare Function StartDbgWnd Lib "dynproxy.dll" (Optional ByVal dbgEnabled As Long = 1) As Long
+Private Declare Sub IPCDebugMode Lib "dynproxy.dll" (Optional ByVal enabled As Long = 1)
 Private Declare Sub SendDbgMsg Lib "dynproxy.dll" (ByVal msg As String)
 Private Declare Function VarPtrArray Lib "msvbvm60.dll" Alias "VarPtr" (Var() As Any) As Long
 
@@ -42,6 +43,8 @@ Private Const DISPATCH_PROPERTYPUTREF = 8
 Private Declare Function LoadLibrary Lib "kernel32" Alias "LoadLibraryA" (ByVal lpLibFileName As String) As Long
 
 Private m_refCountTest As Long
+
+ 
 
 Private Sub TestRefCounts()
     Dim obj1 As Object, obj2 As Object
@@ -69,7 +72,10 @@ Private Sub TestRefCounts()
     SendDbgMsg "After obj2=Nothing, form still alive: " & Me.Name
 End Sub
 
- 
+Function numFuncs() As Long
+        numFuncs = 999
+End Function
+
 Property Set MyObj(x As Object)
     SendDbgMsg ">> from vb6 Property Set MyObj=" & TypeName(x)
 End Property
@@ -82,6 +88,16 @@ Property Let b(x)
     SendDbgMsg ">> from vb6 let b=" & x
 End Property
  
+'Sub testIntrep()
+'
+'    Dim intrep As New CInterpreter
+'    intrep.AddCOMObject "me", Me
+'    intrep.AddCode "print( me.numFuncs())"
+'    Debug.Print Now & " output: " & intrep.GetOutput()
+'
+'End Sub
+
+ 
 Private Sub Form_Load()
     
     Dim h As Long
@@ -89,15 +105,34 @@ Private Sub Form_Load()
     If h = 0 Then End
     
     Dim v As Variant, isObj As Boolean, r As Long
-    Dim vv As Variant
     
+'    SendDbgMsg "before ipcdebug enabled"
+'    IPCDebugMode
+'    SendDbgMsg "now ipcdebug enabled!"
+'    IPCDebugMode 0
+'    SendDbgMsg "now disabled!"
+'    IPCDebugMode
+'    SendDbgMsg "now enabled!"
+'    End
+    
+    StartDbgWnd
+    IPCDebugMode
     SendDbgMsg "<cls>"
+    SendDbgMsg "start " & Now
+    'testIntrep
+    End
     
-    TestRefCounts
-    Exit Sub
+    'TestRefCounts
+    'Exit Sub
     
     
     Dim args() As Variant
+    
+    r = CallByNameEx(Me, "numfuncs", DISPATCH_METHOD, args, v, isObj)
+    SendDbgMsg ">> from vb6 >> after numfuncs return " & v & " typename: " & TypeName(v) & " r=" & r & " isObj: " & isObj
+    
+    
+    
     ReDim args(1)
     args(0) = "1"
     args(1) = "b"
