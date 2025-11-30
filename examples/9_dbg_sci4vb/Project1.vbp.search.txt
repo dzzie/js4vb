@@ -1,0 +1,6 @@
+gotoline
+centered
+ToggleBreakpoint
+ClearAllBreakpoints
+HasBreakpointMarker
+MARKER_EIP
