@@ -410,8 +410,10 @@ Public Sub RunScript()
         interp.AddCOMObject o.Name, o.obj
     Next
     
+    interp.AddCode "function x(){alert(1)}"
+    
     RaiseEvent ScriptStart
-    interp.AddCode scivb.doc.Text
+    interp.Execute scivb.doc.Text
     
     Dim elapsed As Double
     elapsed = Timer - m_executionStartTime

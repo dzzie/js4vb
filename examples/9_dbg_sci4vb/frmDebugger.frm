@@ -133,6 +133,10 @@ End Sub
 
  
 
+Private Sub js_ErrorOccurred(ByVal LineNumber As Long, ByVal ErrorMessage As String)
+     txtOut = txtOut & "Error: " & LineNumber & ": " & ErrorMessage & vbCrLf
+End Sub
+
 Private Sub js_ScriptStart()
     txtOut = Empty
 End Sub

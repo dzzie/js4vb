@@ -1,3 +1,6 @@
+IPCDebugMod
+hoist
+hosit
 parse
 callbyname
 HandleConsoleLog

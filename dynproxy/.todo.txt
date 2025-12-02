@@ -1,0 +1,10 @@
+
+CallByNameEx not working with vb listbox maybe fix:
+// Try getting ITypeInfo
+ITypeInfo* pTypeInfo = nullptr;
+HRESULT hrTI = obj->GetTypeInfo(0, LOCALE_USER_DEFAULT, &pTypeInfo);
+if (SUCCEEDED(hrTI) && pTypeInfo) {
+    // Try invoking through ITypeInfo instead
+    hr = pTypeInfo->Invoke(obj, dispid, invokeFlags, &dp, pResult, nullptr, nullptr);
+    pTypeInfo->Release();
+}

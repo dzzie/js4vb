@@ -86,6 +86,10 @@ Public Event ConsoleLog(ByVal msg As String)
 
 Const debug_mode As Boolean = False
 
+Property Let DynProxyDebug(X As Boolean)
+    If ensureDynProxy() Then IPCDebugMode IIf(X, 1, 0)
+End Property
+
 'example low level api to add a global:
     'Dim config As CValue
     'Set config = interp.CreateJSObject()
@@ -792,6 +796,9 @@ Private Sub ExecuteProgram(programNode As CNode)
     
     If statements Is Nothing Then Exit Sub
     
+    ' HOIST GLOBAL FUNCTIONS FIRST
+    HoistFunctions statements, m_globalScope ' m_currentScope
+
     ' Execute each statement
     Dim stmt As CNode
     Dim stmtIndex As Long
@@ -904,7 +911,8 @@ Private Sub ExecuteStatement(Node As CNode)
             ExecuteReturnStatement Node
             
         Case FunctionDeclaration_Node:
-            ExecuteFunctionDeclaration Node
+            'ExecuteFunctionDeclaration Node
+            ' Skip - already hoisted in ExecuteBlock/ExecuteProgram
             
         Case ThrowStatement_Node:
             ExecuteThrowStatement Node
@@ -1164,6 +1172,9 @@ End Sub
 
 ' Execute block statement
 Private Sub ExecuteBlock(Node As CNode)
+    ' HOIST FUNCTIONS FIRST - before executing any statements
+    HoistFunctions Node.Body, m_currentScope
+    
     Dim i As Long
     For i = 1 To Node.Body.count
         Dim stmt As CNode
@@ -2554,9 +2565,22 @@ Private Sub AssignMember(memberNode As CNode, Value As CValue)
             Dim index As Long
             index = CLng(propValue.ToNumber())
             
-            If index >= 0 And index < obj.arrayVal.count Then
+            If index >= 0 Then
+                ' Expand array if necessary (fill gaps with undefined)
+                Do While index >= obj.arrayVal.count
+                    Dim gap As New CValue
+                    gap.vType = vtUndefined
+                    obj.arrayVal.add gap
+                Loop
+                
+                ' Now replace the element at the target index
                 obj.arrayVal.Remove index + 1
-                obj.arrayVal.add Value, , index + 1
+                ' After removing, check if we can insert before, or must append
+                If index < obj.arrayVal.count Then
+                    obj.arrayVal.add Value, , index + 1  ' Insert before next element
+                Else
+                    obj.arrayVal.add Value  ' Append (was last element)
+                End If
             End If
             Exit Sub
         Else
@@ -3221,6 +3245,11 @@ Private Function EvaluateNewExpression(Node As CNode) As CValue
         
         If Node.Callee.Name = "Date" Then
             Set result = CreateDateObject(Node.Arguments)
+            Set EvaluateNewExpression = result
+            Exit Function
+        ElseIf Node.Callee.Name = "Array" Then
+            ' new Array() / new Array(length) / new Array(item1, item2, ...)
+            Set result = CreateArrayObject(Node.Arguments)
             Set EvaluateNewExpression = result
             Exit Function
         ElseIf Node.Callee.Name = "Error" Then
@@ -5447,7 +5476,9 @@ Public Function CallJSFunction(func As CValue, args As Collection, Optional this
     
     ' Execute function body
     If Not fn.Body Is Nothing Then
+        'Debug.Print ">>> About to execute body for: " & fn.Name
         ExecuteStatement fn.Body
+        'Debug.Print ">>> Finished executing body, hasReturned=" & m_hasReturned
     End If
     
     ' *** ADD DEBUGGER HOOK - Pop frame BEFORE scope restore ***
@@ -5790,6 +5821,52 @@ Private Function DoubleToSignedLong(ByVal dblVal As Double) As Long
     End If
 End Function
 
+' Create Array object from constructor arguments
+Private Function CreateArrayObject(args As Collection) As CValue
+    Dim result As New CValue
+    result.vType = vtArray
+    Set result.arrayVal = New Collection
+    
+    If args.count = 0 Then
+        ' new Array() - empty array
+        ' Already initialized above
+        
+    ElseIf args.count = 1 Then
+        ' Special case: new Array(length) creates array of that length
+        Dim arg As CNode
+        Set arg = args(1)
+        Dim argVal As CValue
+        Set argVal = EvaluateExpression(arg)
+        
+        If argVal.vType = vtNumber Then
+            Dim length As Long
+            length = CLng(argVal.numVal)
+            
+            ' Fill with undefined values
+            Dim i As Long
+            For i = 1 To length
+                Dim undef As New CValue
+                undef.vType = vtUndefined
+                result.arrayVal.add undef
+            Next
+        Else
+            ' Non-numeric single argument: create array with that element
+            result.arrayVal.add argVal
+        End If
+        
+    Else
+        ' new Array(item1, item2, ...) - array with initial values
+        Dim j As Long
+        For j = 1 To args.count
+            Set arg = args(j)
+            Set argVal = EvaluateExpression(arg)
+            result.arrayVal.add argVal
+        Next
+    End If
+    
+    Set CreateArrayObject = result
+End Function
+
 ' ? ADD new Function CreateDateObject
 Private Function CreateDateObject(args As Collection) As CValue
     Dim result As New CValue
@@ -5974,4 +6051,38 @@ Private Function CallDateMethod(dateObj As CValue, methodName As String, args As
     Set CallDateMethod = result
 End Function
 
+
+Private Sub HoistFunctions(statements As Collection, scope As CScope)
+    If statements Is Nothing Then Exit Sub
+    
+    Dim i As Long
+    Dim stmt As CNode
+    Dim func As CFunction
+    Dim funcValue As CValue
+    
+    For i = 1 To statements.count
+        Set stmt = statements(i)
+        
+        If stmt.tType = FunctionDeclaration_Node Then
+            Dim funcName As String
+            funcName = stmt.id.Name
+            
+            'Debug.Print ">>> Hoisting: " & funcName & ", Body is Nothing? " & (stmt.FunctionBody Is Nothing)
+            
+            Set func = New CFunction
+            func.Name = funcName
+            Set func.params = stmt.params
+            Set func.Body = stmt.FunctionBody
+            Set func.closure = scope
+            
+            'Debug.Print ">>>   After set: func.Body is Nothing? " & (func.Body Is Nothing)
+            
+            Set funcValue = New CValue
+            funcValue.vType = vtfunction
+            Set funcValue.objVal = func
+            
+            scope.DefineVar funcName, funcValue
+        End If
+    Next
+End Sub
 
