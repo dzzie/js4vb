@@ -11,7 +11,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 
@@ -77,20 +78,20 @@ Private Declare Function U642Str Lib "utypes.dll" (ByVal v1 As Currency, ByVal b
 'get hi and lo longs from 64 numbers
 Private Declare Sub fromU64 Lib "utypes.dll" (ByVal v0 As Currency, ByRef v1 As Long, ByRef v2 As Long)
 
-Property Get Value()
-Attribute Value.VB_UserMemId = 0
-    Value = rawValue
+Property Get value()
+Attribute value.VB_UserMemId = 0
+    value = rawValue
 End Property
 
 'this is the default method of the class
-Property Let Value(v)
+Property Let value(v)
     
     If TypeName(v) = "String" Then
         fromString v
     ElseIf TypeName(v) = "ULong64" Then
-        rawValue = v.Value
+        rawValue = v.value
     ElseIf TypeName(v) = "ULong" Or TypeName(v) = "UInt" Or TypeName(v) = "UByte" Then
-        SetLongs 0, v.Value
+        SetLongs 0, v.value
     ElseIf TypeName(v) = "Long" Or TypeName(v) = "Byte" Or TypeName(v) = "Integer" Then
         SetLongs 0, CLng(v)
     ElseIf TypeName(v) = "Currency" Or TypeName(v) = "Double" Then
@@ -104,7 +105,7 @@ End Property
 'this way you can .setval(x).add(y)
 Function setVal(v) As ULong64
     Set setVal = Me
-    Value = v
+    value = v
 End Function
 
 Property Get MAX_SIGNED64() As String

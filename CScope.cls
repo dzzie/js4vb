@@ -11,7 +11,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 
@@ -32,7 +33,7 @@ Private Sub Class_Initialize()
 End Sub
 
 ' Define a new variable in this scope
-Public Sub DefineVar(Name As String, Value As CValue)
+Public Sub DefineVar(Name As String, value As CValue)
     On Error Resume Next
     ' Remove if exists
     m_vars.Remove Name
@@ -40,7 +41,7 @@ Public Sub DefineVar(Name As String, Value As CValue)
     On Error GoTo 0
     
     ' Add new value
-    m_vars.add Value, Name
+    m_vars.add value, Name
     m_varNames.add Name, Name  'track the name
 End Sub
 
@@ -70,7 +71,7 @@ Public Function GetVar(Name As String) As CValue
     On Error GoTo 0
 End Function
 
-Public Sub SetVar(Name As String, Value As CValue)
+Public Sub SetVar(Name As String, value As CValue)
     Dim existing As CValue
     Dim found As Boolean
     
@@ -83,14 +84,14 @@ Public Sub SetVar(Name As String, Value As CValue)
     If found Then
         ' Found in this scope - update it
         m_vars.Remove Name
-        m_vars.add Value, Name
+        m_vars.add value, Name
     ElseIf Not m_parent Is Nothing Then
         ' Try parent scope
-        m_parent.SetVar Name, Value
+        m_parent.SetVar Name, value
     Else
         ' Not found anywhere - create in global scope (sloppy mode)
         ' This prevents infinite recursion
-        m_vars.add Value, Name
+        m_vars.add value, Name
     End If
 End Sub
 

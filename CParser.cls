@@ -11,7 +11,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 'todo: barfing on parsing regex literals, and named for loops like outer: for(){ (see es5.txt
@@ -36,16 +37,16 @@ Private Sub Class_Initialize()
     Set scanner = New CScanner
 End Sub
 
-Friend Function ParseSingleExpression(source As String) As CNode
-    scanner.init source
+Friend Function ParseSingleExpression(Source As String) As CNode
+    scanner.Init Source
     Set lookahead = scanner.Lex()
     Set ParseSingleExpression = ParseExpression()
 End Function
 
-Public Function ParseScript(source As String) As CNode
+Public Function ParseScript(Source As String) As CNode
     On Error GoTo ErrorHandler
     
-    scanner.init source
+    scanner.Init Source
     Set lookahead = scanner.Lex()
     
     Dim program As New CNode
@@ -73,8 +74,8 @@ Public Function ParseScript(source As String) As CNode
 ErrorHandler:
     Debug.Print "ERROR in ParseScript: " & Err.description
     Debug.Print "Error Number: " & Err.Number
-    Debug.Print "Current token: " & lookahead.Value & " (type " & lookahead.tType & ")"
-    Err.Raise Err.Number, Err.source, Err.description
+    Debug.Print "Current token: " & lookahead.value & " (type " & lookahead.tType & ")"
+    Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
 ' ============================================
@@ -89,7 +90,7 @@ Private Function Expect(tokenValue As String) As CToken
         ThrowUnexpectedToken lookahead
     End If
     
-    If lookahead.Value <> tokenValue Then
+    If lookahead.value <> tokenValue Then
         ThrowUnexpectedToken lookahead
     End If
     
@@ -101,18 +102,18 @@ End Function
 
 Private Function match(tokenValue As String) As Boolean
     match = (lookahead.tType = Punctuator Or lookahead.tType = Keyword) _
-            And lookahead.Value = tokenValue
+            And lookahead.value = tokenValue
 End Function
 
 Private Function MatchKeyword(kw As String) As Boolean
-    MatchKeyword = (lookahead.tType = Keyword) And (lookahead.Value = kw)
+    MatchKeyword = (lookahead.tType = Keyword) And (lookahead.value = kw)
 End Function
 
 Private Sub ThrowUnexpectedToken(token As CToken)
     Dim column As Long
     column = token.Start - token.LineStart + 1  ' +1 for 1-based column
     Err.Raise vbObjectError + 2000, "CParser", _
-              "Unexpected token: " & token.Value & " at line " & token.LineNumber & ", column " & column
+              "Unexpected token: " & token.value & " at line " & token.LineNumber & ", column " & column
 End Sub
 
 ' ============================================
@@ -123,7 +124,7 @@ Private Function ParseStatementListItem() As CNode
     On Error GoTo ErrorHandler
     
     If lookahead.tType = Keyword Then
-        Select Case lookahead.Value
+        Select Case lookahead.value
             Case "function"
                 Set ParseStatementListItem = ParseFunctionDeclaration()
             Case Else
@@ -136,7 +137,7 @@ Private Function ParseStatementListItem() As CNode
     
 ErrorHandler:
     Debug.Print "ERROR in ParseStatementListItem"
-    Debug.Print "  Token: '" & lookahead.Value & "' (type " & lookahead.tType & ")"
+    Debug.Print "  Token: '" & lookahead.value & "' (type " & lookahead.tType & ")"
     Err.Raise Err.Number, "ParseStatementListItem", Err.description
 End Function
 
@@ -150,7 +151,7 @@ Private Function ParseStatement() As CNode
     
     Select Case lookahead.tType
         Case Punctuator
-            Select Case lookahead.Value
+            Select Case lookahead.value
                 Case ";"
                     Set stmt = ParseEmptyStatement()
                 Case "{"
@@ -160,7 +161,7 @@ Private Function ParseStatement() As CNode
             End Select
             
         Case Keyword
-            Select Case lookahead.Value
+            Select Case lookahead.value
                 Case "var"
                     Set stmt = ParseVariableStatement()
                 Case "if"
@@ -205,7 +206,7 @@ Private Function ParseStatement() As CNode
     
 ErrorHandler:
     Debug.Print "ERROR in ParseStatement"
-    Debug.Print "  Token: '" & lookahead.Value & "' (type " & lookahead.tType & ")"
+    Debug.Print "  Token: '" & lookahead.value & "' (type " & lookahead.tType & ")"
     Err.Raise Err.Number, "ParseStatement", Err.description
 End Function
 
@@ -344,7 +345,7 @@ Private Function ParseVariableDeclarator() As CNode
     ' Parse initializer if present
     If match("=") Then
         Expect "="
-        Set Node.init = ParseAssignmentExpression()
+        Set Node.Init = ParseAssignmentExpression()
     End If
     
     Set ParseVariableDeclarator = Node
@@ -469,7 +470,7 @@ Private Function ParseForStatement() As CNode
         ElseIf match("=") Then
             ' Has initializer, must be regular for
             Expect "="
-            Set declNode.init = ParseAssignmentExpression()
+            Set declNode.Init = ParseAssignmentExpression()
             varDecl.Declarations.add declNode
             
             ' Continue with regular for loop logic
@@ -519,12 +520,12 @@ Private Function ParseForStatement() As CNode
         ' We need to continue parsing to get the full expression
         
         ' Check for assignment operators
-        If lookahead.tType = Punctuator And IsAssignmentOperator(lookahead.Value) Then
+        If lookahead.tType = Punctuator And IsAssignmentOperator(lookahead.value) Then
             Dim assignStartLine As Long
             assignStartLine = firstExpr.LineNumber  ' Use line from left expr
             
             Dim op As String
-            op = lookahead.Value
+            op = lookahead.value
             Expect op
             
             Dim assignNode As New CNode
@@ -765,9 +766,9 @@ Private Function ParseAssignmentExpression() As CNode
     
     ' Check for assignment operators
     If lookahead.tType = Punctuator Then
-        If IsAssignmentOperator(lookahead.Value) Then
+        If IsAssignmentOperator(lookahead.value) Then
             Dim op As String
-            op = lookahead.Value
+            op = lookahead.value
             startLine = lookahead.LineNumber
     
             Expect op
@@ -831,7 +832,7 @@ Private Function ParseLogicalORExpression() As CNode
     
     Do While match("||")
         Dim op As String
-        op = lookahead.Value
+        op = lookahead.value
         startLine = lookahead.LineNumber
         Expect op
         
@@ -853,7 +854,7 @@ Private Function ParseLogicalANDExpression() As CNode
     
     Do While match("&&")
         Dim op As String
-        op = lookahead.Value
+        op = lookahead.value
         startLine = lookahead.LineNumber
         Expect op
         
@@ -875,7 +876,7 @@ Private Function ParseBitwiseORExpression() As CNode
     
     Do While match("|")
         Dim op As String
-        op = lookahead.Value
+        op = lookahead.value
         startLine = lookahead.LineNumber
         Expect op
         
@@ -897,7 +898,7 @@ Private Function ParseBitwiseXORExpression() As CNode
     
     Do While match("^")
         Dim op As String
-        op = lookahead.Value
+        op = lookahead.value
         startLine = lookahead.LineNumber
         Expect op
         
@@ -920,7 +921,7 @@ Private Function ParseBitwiseANDExpression() As CNode
     Do While match("&")
         Dim op As String
         startLine = lookahead.LineNumber
-        op = lookahead.Value
+        op = lookahead.value
         Expect op
         
         Set Node = New CNode
@@ -942,7 +943,7 @@ Private Function ParseEqualityExpression() As CNode
     Do While match("==") Or match("!=") Or match("===") Or match("!==")
         Dim op As String
         startLine = lookahead.LineNumber
-        op = lookahead.Value
+        op = lookahead.value
         Expect op
         
         Set Node = New CNode
@@ -965,7 +966,7 @@ Private Function ParseRelationalExpression() As CNode
           MatchKeyword("instanceof") Or MatchKeyword("in")
         Dim op As String
         startLine = lookahead.LineNumber
-        op = lookahead.Value
+        op = lookahead.value
         Expect op
         
         Set Node = New CNode
@@ -986,7 +987,7 @@ Private Function ParseShiftExpression() As CNode
     
     Do While match("<<") Or match(">>") Or match(">>>")
         Dim op As String
-        op = lookahead.Value
+        op = lookahead.value
         startLine = lookahead.LineNumber
         Expect op
         
@@ -1009,7 +1010,7 @@ Private Function ParseAdditiveExpression() As CNode
     Do While match("+") Or match("-")
         Dim op As String
         startLine = lookahead.LineNumber
-        op = lookahead.Value
+        op = lookahead.value
         Expect op
         
         Set Node = New CNode
@@ -1033,7 +1034,7 @@ Private Function ParseMultiplicativeExpression() As CNode
     
     Do While match("*") Or match("/") Or match("%")
         startLine = lookahead.LineNumber  ' Capture BEFORE Expect
-        op = lookahead.Value
+        op = lookahead.value
         Expect op
         Set Node = New CNode
         Node.tType = BinaryExpression_Node
@@ -1062,7 +1063,7 @@ Private Function ParseUnaryExpression() As CNode
         If match("++") Or match("--") Then
             Set Node = New CNode
             Node.tType = UpdateExpression_Node
-            Node.operator = lookahead.Value
+            Node.operator = lookahead.value
             Node.LineNumber = startLine
             Node.Prefix = True
             Expect Node.operator
@@ -1073,7 +1074,7 @@ Private Function ParseUnaryExpression() As CNode
         ElseIf match("+") Or match("-") Or match("~") Or match("!") Then
             Set Node = New CNode
             Node.tType = UnaryExpression_Node
-            Node.operator = lookahead.Value
+            Node.operator = lookahead.value
             Node.LineNumber = startLine
             Node.Prefix = True
             Expect Node.operator
@@ -1084,7 +1085,7 @@ Private Function ParseUnaryExpression() As CNode
         ElseIf MatchKeyword("typeof") Or MatchKeyword("void") Or MatchKeyword("delete") Then
             Set Node = New CNode
             Node.tType = UnaryExpression_Node
-            Node.operator = lookahead.Value
+            Node.operator = lookahead.value
             Node.LineNumber = startLine
             Node.Prefix = True
             Expect Node.operator
@@ -1107,11 +1108,11 @@ Private Function ParsePostfixExpression() As CNode
     
     ' Postfix ++ or --
     If lookahead.tType = Punctuator Then
-        If lookahead.Value = "++" Or lookahead.Value = "--" Then
+        If lookahead.value = "++" Or lookahead.value = "--" Then
             startLine = lookahead.LineNumber  ' Capture BEFORE consuming
             Set Node = New CNode
             Node.tType = UpdateExpression_Node
-            Node.operator = lookahead.Value
+            Node.operator = lookahead.value
             Node.LineNumber = startLine
             Node.Prefix = False
             Set Node.Argument = expr
@@ -1268,7 +1269,7 @@ Private Function ParseStaticMember(obj As CNode) As CNode
     Dim propNode As CNode       ' ? REMOVE "As New"
     Set propNode = New CNode    ' ? CREATE NEW
     propNode.tType = Identifier_Node
-    propNode.Name = lookahead.Value
+    propNode.Name = lookahead.value
     propNode.LineNumber = X
     Set lookahead = scanner.Lex()
     
@@ -1315,18 +1316,18 @@ Private Function ParsePrimaryExpression() As CNode
         Case Identifier
             'Set Node = New CNode
             Node.tType = Identifier_Node
-            Node.Name = lookahead.Value
+            Node.Name = lookahead.value
             ' Consume the identifier token
             Set lookahead = scanner.Lex()
             
         Case StringLiteral, NumericLiteral, Int64Literal
             'Set Node = New CNode
             Node.tType = Literal_Node
-            Node.Raw = lookahead.Value
+            Node.Raw = lookahead.value
         
             If lookahead.tType = NumericLiteral Then
                 Dim checkVal As String
-                checkVal = lookahead.Value
+                checkVal = lookahead.value
                 
                 ' Check if it's hex
                 If Len(checkVal) > 2 And (Left$(LCase(checkVal), 2) = "0x") Then
@@ -1341,32 +1342,32 @@ Private Function ParsePrimaryExpression() As CNode
                         ' Check if it needs Int64 storage
                         If hi <> 0 Then
                             ' Definitely needs Int64 - store as string (no "n" - let EvaluateLiteral decide)
-                            Node.Value = checkVal
+                            Node.value = checkVal
                         ElseIf lo < 0 Then
                             ' Lo is negative (0x80000000-0xFFFFFFFF range)
                             ' Store as string so EvaluateLiteral can auto-promote to BigInt
-                            Node.Value = checkVal
+                            Node.value = checkVal
                         Else
                             ' Small positive value (0x00000000-0x7FFFFFFF)
                             ' Safe to store as Double
-                            Node.Value = CDbl(lo)
+                            Node.value = CDbl(lo)
                         End If
                     Else
                         ' Parse failed - store as 0
-                        Node.Value = CDbl(0)
+                        Node.value = CDbl(0)
                     End If
                 Else
                     ' Regular decimal number
-                    Node.Value = CDbl(checkVal)
+                    Node.value = CDbl(checkVal)
                 End If
                 
             ElseIf lookahead.tType = Int64Literal Then
                 ' Already marked as Int64 by scanner
-                Node.Value = lookahead.Value & "n"
+                Node.value = lookahead.value & "n"
                 
             Else
                 ' StringLiteral - keep as string
-                Node.Value = lookahead.Value
+                Node.value = lookahead.value
             End If
             
             ' Consume the literal token
@@ -1375,8 +1376,8 @@ Private Function ParsePrimaryExpression() As CNode
         Case BooleanLiteral
             'Set Node = New CNode
             Node.tType = Literal_Node
-            Node.Raw = lookahead.Value
-            Node.Value = (lookahead.Value = "true")
+            Node.Raw = lookahead.value
+            Node.value = (lookahead.value = "true")
             ' Consume the boolean token
             Set lookahead = scanner.Lex()
             
@@ -1384,7 +1385,7 @@ Private Function ParsePrimaryExpression() As CNode
             'Set Node = New CNode
             Node.tType = Literal_Node
             Node.Raw = "null"
-            Node.Value = Null
+            Node.value = Null
             ' Consume the null token
             Set lookahead = scanner.Lex()
             
@@ -1401,7 +1402,7 @@ Private Function ParsePrimaryExpression() As CNode
             End If
             
         Case Punctuator
-            Select Case lookahead.Value
+            Select Case lookahead.value
                 Case "["
                     Set Node = ParseArrayExpression()
                     Node.LineNumber = startLine
@@ -1418,8 +1419,8 @@ Private Function ParsePrimaryExpression() As CNode
         Case RegularExpression
             'Set Node = New CNode
             Node.tType = Literal_Node
-            Node.Raw = lookahead.Value
-            Node.Value = lookahead.Value
+            Node.Raw = lookahead.value
+            Node.value = lookahead.value
             Set lookahead = scanner.Lex()
             
         Case Else
@@ -1475,10 +1476,10 @@ Private Function ParseObjectExpression() As CNode
         
         ' Check for getter/setter
         ' Must be careful: {get: 5} is a regular property, but {get foo()} is a getter
-        If lookahead.tType = Identifier And (lookahead.Value = "get" Or lookahead.Value = "set") Then
+        If lookahead.tType = Identifier And (lookahead.value = "get" Or lookahead.value = "set") Then
             ' Save the get/set keyword
             Dim propKind As String
-            propKind = lookahead.Value
+            propKind = lookahead.value
             
             ' Consume 'get' or 'set'
             Set getSetToken = lookahead
@@ -1510,7 +1511,7 @@ Private Function ParseObjectExpression() As CNode
                 If propKind = "set" Then
                     If Not match(")") Then
                         If lookahead.tType = Identifier Then
-                            funcNode.params.add ParsePrimaryExpression()
+                            funcNode.Params.add ParsePrimaryExpression()
                         End If
                     End If
                 End If
@@ -1622,7 +1623,7 @@ Private Function ParseFunctionDeclaration() As CNode
             If lookahead.tType <> Identifier Then
                 ThrowUnexpectedToken lookahead
             End If
-            Node.params.add ParsePrimaryExpression()
+            Node.Params.add ParsePrimaryExpression()
             
             If Not match(",") Then Exit Do
             Expect ","
@@ -1660,7 +1661,7 @@ Private Function ParseFunctionExpression() As CNode
             If lookahead.tType <> Identifier Then
                 ThrowUnexpectedToken lookahead
             End If
-            Node.params.add ParsePrimaryExpression()
+            Node.Params.add ParsePrimaryExpression()
             
             If Not match(",") Then Exit Do
             Expect ","

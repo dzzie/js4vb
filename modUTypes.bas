@@ -1,5 +1,6 @@
 Attribute VB_Name = "modUTypes"
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 Option Explicit
@@ -73,26 +74,26 @@ Public Function GetDllPath(Optional dll As String = "vbUtypes.dll") As String
      GetDllPath = ret
 End Function
 
-Sub push(ary, Value) 'this modifies parent ary object
-    On Error GoTo init
+Sub push(ary, value) 'this modifies parent ary object
+    On Error GoTo Init
     Dim X
        
     X = UBound(ary)
     ReDim Preserve ary(X + 1)
     
-    If IsObject(Value) Then
-        Set ary(X + 1) = Value
+    If isObject(value) Then
+        Set ary(X + 1) = value
     Else
-        ary(X + 1) = Value
+        ary(X + 1) = value
     End If
     
     Exit Sub
-init:
+Init:
     ReDim ary(0)
-    If IsObject(Value) Then
-        Set ary(0) = Value
+    If isObject(value) Then
+        Set ary(0) = value
     Else
-        ary(0) = Value
+        ary(0) = value
     End If
 End Sub
 

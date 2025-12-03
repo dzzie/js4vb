@@ -11,7 +11,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 
@@ -49,7 +50,7 @@ End Enum
 
 ' Token data
 Public tType As TokenType
-Public Value As String
+Public value As String
 Public LineNumber As Long
 Public LineStart As Long
 Public Start As Long
@@ -80,5 +81,5 @@ Public Function IsNullLiteral(word As String) As Boolean
 End Function
 
 Public Function ToString() As String
-    ToString = "Token{" & Me.tType & ", '" & Me.Value & "', line:" & Me.LineNumber & "}"
+    ToString = "Token{" & Me.tType & ", '" & Me.value & "', line:" & Me.LineNumber & "}"
 End Function

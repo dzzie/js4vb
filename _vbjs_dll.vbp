@@ -19,6 +19,7 @@ Class=CJson; CJson.cls
 Class=CVariable; CVariable.cls
 Class=CReference; CReference.cls
 Class=CBeautifier; CBeautifier.cls
+Form=frmAbout.frm
 Startup="(None)"
 HelpFile=""
 Title="jsvb"

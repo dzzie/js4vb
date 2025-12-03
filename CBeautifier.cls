@@ -11,6 +11,10 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
+'Site:    http://sandsprite.com
+'License: MIT
 '====================================================================
 ' CBeautifier.cls - Professional JavaScript Code Beautifier
 ' "Make it gorgeous!"
@@ -334,7 +338,7 @@ Private Sub EmitFunctionDeclaration(Node As CNode)
     If SpaceBeforeFunctionParen Then Append " "
     
     Append "("
-    EmitParameters Node.params
+    EmitParameters Node.Params
     Append ")"
     
     ' Brace style
@@ -370,7 +374,7 @@ Private Sub EmitFunctionExpression(Node As CNode)
     End If
     
     Append "("
-    EmitParameters Node.params
+    EmitParameters Node.Params
     Append ")"
     
     Append " {"
@@ -384,25 +388,25 @@ Private Sub EmitFunctionExpression(Node As CNode)
     Append "}"
 End Sub
 
-Private Sub EmitParameters(params As Collection)
-    If params Is Nothing Then Exit Sub
+Private Sub EmitParameters(Params As Collection)
+    If Params Is Nothing Then Exit Sub
     
     Dim i As Long
-    For i = 1 To params.count
+    For i = 1 To Params.count
         Dim param As CNode
-        Set param = params(i)
+        Set param = Params(i)
         
         If SpaceInParens And i = 1 Then Append " "
         
         Append param.Name
         
-        If i < params.count Then
+        If i < Params.count Then
             If SpaceBeforeComma Then Append " "
             Append ","
             If SpaceAfterComma Then Append " "
         End If
         
-        If SpaceInParens And i = params.count Then Append " "
+        If SpaceInParens And i = Params.count Then Append " "
     Next
 End Sub
 
@@ -417,11 +421,11 @@ Private Sub EmitVariableDeclaration(Node As CNode)
         
         Append decl.VarID.Name
         
-        If Not decl.init Is Nothing Then
+        If Not decl.Init Is Nothing Then
             If SpaceBeforeBinaryOp Then Append " "
             Append "="
             If SpaceAfterBinaryOp Then Append " "
-            EmitNode decl.init
+            EmitNode decl.Init
         End If
         
         If i < Node.Declarations.count Then
@@ -680,7 +684,7 @@ Private Sub EmitMemberExpression(Node As CNode)
 End Sub
 
 Private Sub EmitLiteral(Node As CNode)
-    If VarType(Node.Value) = vbString Then
+    If VarType(Node.value) = vbString Then
         ' Handle string with quote style
         Dim quote As String
         Select Case QuoteStyleOption
@@ -692,9 +696,9 @@ Private Sub EmitLiteral(Node As CNode)
                 Exit Sub
         End Select
         
-        Append quote & CStr(Node.Value) & quote
+        Append quote & CStr(Node.value) & quote
     Else
-        Append CStr(Node.Value)
+        Append CStr(Node.value)
     End If
 End Sub
 

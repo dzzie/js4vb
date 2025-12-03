@@ -11,7 +11,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 '------------------------------------------------------------
@@ -21,11 +22,11 @@ Attribute VB_Exposed = True
 
 Option Explicit
 
-Public params As Collection    ' Collection of parameter names (strings)
+Public Params As Collection    ' Collection of parameter names (strings)
 Public Body As CNode          ' Function body (BlockStatement)
 Public closure As CScope      ' Closure scope (where function was defined)
 Public Name As String         ' Function name (can be empty for anonymous)
 
 Private Sub Class_Initialize()
-    Set params = New Collection
+    Set Params = New Collection
 End Sub

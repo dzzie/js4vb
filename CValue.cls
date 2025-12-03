@@ -11,7 +11,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 'part of intrepreter support
@@ -96,8 +97,8 @@ Attribute ToString.VB_UserMemId = 0
                 ToString = "[Array]"
         Case vtfunction:
                 If Not objVal Is Nothing Then
-                    If Len(objVal.name) > 0 Then
-                        ToString = "[Function: " & objVal.name & "]"
+                    If Len(objVal.Name) > 0 Then
+                        ToString = "[Function: " & objVal.Name & "]"
                     Else
                         ToString = "[Function (anonymous)]"
                     End If
@@ -347,7 +348,7 @@ End Function
 
 ' Set a property on this object
 'case sensitive
-Public Sub SetProperty(propName As String, Value As CValue)
+Public Sub SetProperty(propName As String, value As CValue)
 
     If vType <> vtObject Then
         Err.Raise 5, "CValue.SetProperty", "Not an object"
@@ -377,18 +378,18 @@ Public Sub SetProperty(propName As String, Value As CValue)
         ' Re-add at same position
         If foundIndex <= objectKeys.count Then
             objectKeys.add propName, , foundIndex
-            objectProps.add Value, , foundIndex
+            objectProps.add value, , foundIndex
         Else
             objectKeys.add propName
-            objectProps.add Value
+            objectProps.add value
         End If
         
-        If dbg_mode Then Debug.Print ">>> CValue.SetProperty('" & propName & "') = " & Value.vType & " (updated)"
+        If dbg_mode Then Debug.Print ">>> CValue.SetProperty('" & propName & "') = " & value.vType & " (updated)"
     Else
         ' NEW: Just add
         objectKeys.add propName
-        objectProps.add Value, propName
-        If dbg_mode Then Debug.Print ">>> CValue.SetProperty('" & propName & "') = " & Value.vType & " (new)"
+        objectProps.add value, propName
+        If dbg_mode Then Debug.Print ">>> CValue.SetProperty('" & propName & "') = " & value.vType & " (new)"
     End If
 End Sub
 

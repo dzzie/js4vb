@@ -11,7 +11,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 
@@ -26,7 +27,7 @@ Attribute VB_Exposed = False
 
 Option Explicit
 
-Private source As String
+Private Source As String
 Private length As Long
 Private index As Long
 Private LineNumber As Long
@@ -44,8 +45,8 @@ Private Sub Class_Initialize()
     Set tokenHelper = New CToken
 End Sub
 
-Public Sub init(code As String)
-    source = code
+Public Sub Init(code As String)
+    Source = code
     length = Len(code)
     index = 0
     LineNumber = 1
@@ -136,7 +137,7 @@ Private Function CharAt(idx As Long) As String
     If idx >= length Then
         CharAt = ""
     Else
-        CharAt = Mid$(source, idx + 1, 1)
+        CharAt = Mid$(Source, idx + 1, 1)
     End If
 End Function
 
@@ -205,7 +206,7 @@ Private Function SkipSingleLineComment() As String
         End If
     Loop
     
-    comment = Mid$(source, Start + 1, index - Start)
+    comment = Mid$(Source, Start + 1, index - Start)
     SkipSingleLineComment = comment
 End Function
 
@@ -239,7 +240,7 @@ Private Function SkipMultiLineComment() As String
         End If
     Loop
     
-    comment = Mid$(source, Start + 1, index - Start)
+    comment = Mid$(Source, Start + 1, index - Start)
     SkipMultiLineComment = comment
 End Function
 
@@ -300,7 +301,7 @@ Private Function ScanIdentifier() As CToken
         index = index + 1
     Loop
     
-    id = Mid$(source, Start + 1, index - Start)
+    id = Mid$(Source, Start + 1, index - Start)
     
     ' Check if it's a keyword
     If tokenHelper.IsKeyword(id) Then
@@ -315,7 +316,7 @@ Private Function ScanIdentifier() As CToken
         token.tType = Identifier
     End If
     
-    token.Value = id
+    token.value = id
     token.LineNumber = LineNumber
     token.LineStart = LineStart
     token.Start = Start
@@ -347,77 +348,77 @@ Private Function ScanPunctuator() As CToken
     
     If ch = ">" And ch2 = ">" And ch3 = ">" And ch4 = "=" Then
         index = index + 4
-        token.Value = ">>>="
+        token.value = ">>>="
     ElseIf ch = "=" And ch2 = "=" And ch3 = "=" Then
         index = index + 3
-        token.Value = "==="
+        token.value = "==="
     ElseIf ch = "!" And ch2 = "=" And ch3 = "=" Then
         index = index + 3
-        token.Value = "!=="
+        token.value = "!=="
     ElseIf ch = ">" And ch2 = ">" And ch3 = ">" Then
         index = index + 3
-        token.Value = ">>>"
+        token.value = ">>>"
     ElseIf ch = "<" And ch2 = "<" And ch3 = "=" Then
         index = index + 3
-        token.Value = "<<="
+        token.value = "<<="
     ElseIf ch = ">" And ch2 = ">" And ch3 = "=" Then
         index = index + 3
-        token.Value = ">>="
+        token.value = ">>="
     ' 2-character punctuators
     ElseIf ch = "=" And ch2 = "=" Then
         index = index + 2
-        token.Value = "=="
+        token.value = "=="
     ElseIf ch = "!" And ch2 = "=" Then
         index = index + 2
-        token.Value = "!="
+        token.value = "!="
     ElseIf ch = "<" And ch2 = "=" Then
         index = index + 2
-        token.Value = "<="
+        token.value = "<="
     ElseIf ch = ">" And ch2 = "=" Then
         index = index + 2
-        token.Value = ">="
+        token.value = ">="
     ElseIf ch = "+" And ch2 = "+" Then
         index = index + 2
-        token.Value = "++"
+        token.value = "++"
     ElseIf ch = "-" And ch2 = "-" Then
         index = index + 2
-        token.Value = "--"
+        token.value = "--"
     ElseIf ch = "<" And ch2 = "<" Then
         index = index + 2
-        token.Value = "<<"
+        token.value = "<<"
     ElseIf ch = ">" And ch2 = ">" Then
         index = index + 2
-        token.Value = ">>"
+        token.value = ">>"
     ElseIf ch = "&" And ch2 = "&" Then
         index = index + 2
-        token.Value = "&&"
+        token.value = "&&"
     ElseIf ch = "|" And ch2 = "|" Then
         index = index + 2
-        token.Value = "||"
+        token.value = "||"
     ElseIf ch = "+" And ch2 = "=" Then
         index = index + 2
-        token.Value = "+="
+        token.value = "+="
     ElseIf ch = "-" And ch2 = "=" Then
         index = index + 2
-        token.Value = "-="
+        token.value = "-="
     ElseIf ch = "*" And ch2 = "=" Then
         index = index + 2
-        token.Value = "*="
+        token.value = "*="
     ElseIf ch = "/" And ch2 = "=" Then
         index = index + 2
-        token.Value = "/="
+        token.value = "/="
     ElseIf ch = "%" And ch2 = "=" Then
         index = index + 2
-        token.Value = "%="
+        token.value = "%="
     ElseIf ch = "&" And ch2 = "=" Then
         index = index + 2
-        token.Value = "&="
+        token.value = "&="
     ElseIf ch = "|" And ch2 = "=" Then
         index = index + 2
-        token.Value = "|="
+        token.value = "|="
     ElseIf ch = "^" And ch2 = "=" Then
         index = index + 2
-        token.Value = "^="
+        token.value = "^="
     ' Single character punctuators
     ElseIf ch = "{" Or ch = "}" Or ch = "(" Or ch = ")" Or _
            ch = "[" Or ch = "]" Or ch = ";" Or ch = "," Or _
@@ -426,7 +427,7 @@ Private Function ScanPunctuator() As CToken
            ch = "/" Or ch = "%" Or ch = "<" Or ch = ">" Or _
            ch = "=" Or ch = "&" Or ch = "|" Or ch = "^" Then
         index = index + 1
-        token.Value = ch
+        token.value = ch
     Else
         Err.Raise vbObjectError + 1001, "CScanner", "Unexpected character: " & ch
     End If
@@ -609,10 +610,10 @@ Private Function ScanNumericLiteral() As CToken
     ' Determine token type
     If needsInt64 Then
         token.tType = Int64Literal
-        token.Value = buf  ' Store without the 'n' - we'll add it in the interpreter
+        token.value = buf  ' Store without the 'n' - we'll add it in the interpreter
     Else
         token.tType = NumericLiteral
-        token.Value = buf
+        token.value = buf
     End If
     
     token.LineNumber = LineNumber
@@ -664,7 +665,7 @@ Private Function ScanStringLiteral() As CToken
                 Case "x"
                     ' Hex escape \xNN
                     Dim hex As String
-                    hex = Mid$(source, index + 1, 2)
+                    hex = Mid$(Source, index + 1, 2)
                     If Len(hex) = 2 And IsHexDigit(Mid$(hex, 1, 1)) And IsHexDigit(Mid$(hex, 2, 1)) Then
                         str = str & Chr$("&H" & hex)
                         index = index + 2
@@ -674,7 +675,7 @@ Private Function ScanStringLiteral() As CToken
                 Case "u"
                     ' Unicode escape \uNNNN - simplified
                     Dim uni As String
-                    uni = Mid$(source, index + 1, 4)
+                    uni = Mid$(Source, index + 1, 4)
                     If Len(uni) = 4 Then
                         ' Try to convert (will fail on high unicode in VB6)
                         On Error Resume Next
@@ -699,7 +700,7 @@ Private Function ScanStringLiteral() As CToken
     Loop
     
     token.tType = StringLiteral
-    token.Value = str
+    token.value = str
     token.LineNumber = LineNumber
     token.LineStart = LineStart
     token.Start = Start
@@ -757,7 +758,7 @@ Public Function Lex() As CToken
     End If
 
     m_lastTokenType = resultToken.tType
-    m_lastTokenValue = resultToken.Value
+    m_lastTokenValue = resultToken.value
     Set Lex = resultToken
     
 End Function
@@ -872,7 +873,7 @@ Private Function ScanRegexLiteral() As CToken
     Loop
     
     token.tType = RegularExpression
-    token.Value = "/" & pattern & "/" & flags
+    token.value = "/" & pattern & "/" & flags
     token.LineNumber = LineNumber
     token.LineStart = LineStart
     token.Start = Start

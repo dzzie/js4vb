@@ -11,7 +11,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 
@@ -464,8 +465,8 @@ propGetHandler: 'YEAH..I DID IT...AND ILL DO IT AGAIN!
     Exit Function
     
 ErrorHandler:
-    Debug.Print ">>> CJavaScriptObject.ResolveInvoke ERROR: " & Err.Description & " ERL_Line: " & Erl
-    Err.Raise Err.Number, "CJavaScriptObject.ResolveInvoke", Err.Description
+    Debug.Print ">>> CJavaScriptObject.ResolveInvoke ERROR: " & Err.description & " ERL_Line: " & Erl
+    Err.Raise Err.Number, "CJavaScriptObject.ResolveInvoke", Err.description
 End Function
 
 ' ----------------------------------------------------------------

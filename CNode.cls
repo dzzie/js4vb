@@ -11,11 +11,12 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
-Option Explicit
-
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
+Option Explicit
+
 
 '------------------------------------------------------------
 ' CNode.cls - AST Node Base Class
@@ -92,11 +93,11 @@ Public Body As Collection           ' Collection of statements
 Public Name As String
 
 ' Literal
-Public Value As Variant
+Public value As Variant
 Public Raw As String
 
 ' Binary/Logical/Assignment Expression
-Public Operator As String
+Public operator As String
 Public Left As CNode
 Public Right As CNode
 
@@ -120,7 +121,7 @@ Public Arguments As Collection
 
 ' Function Declaration/Expression
 Public id As CNode                  ' Identifier (can be Nothing for anonymous)
-Public params As Collection         ' Collection of CNode (Identifiers)
+Public Params As Collection         ' Collection of CNode (Identifiers)
 Public FunctionBody As CNode        ' BlockStatement
 
 ' Variable Declaration
@@ -129,7 +130,7 @@ Public Kind As String              ' "var", "let", "const"
 
 ' Variable Declarator
 Public VarID As CNode              ' Identifier
-Public init As CNode               ' Expression (can be Nothing)
+Public Init As CNode               ' Expression (can be Nothing)
 
 ' If Statement
 Public IfTest As CNode
@@ -183,7 +184,7 @@ Private Sub Class_Initialize()
     Set Test = Nothing
     Set Consequent = Nothing
     Set Alternate = Nothing
-    Set init = Nothing
+    Set Init = Nothing
     Set ForUpdate = Nothing
     Set Body = Nothing
     Set Object = Nothing
@@ -195,7 +196,7 @@ Private Sub Class_Initialize()
     ' Initialize collections
     Set Body = New Collection
     Set Arguments = New Collection
-    Set params = New Collection
+    Set Params = New Collection
     Set Declarations = New Collection
     Set Properties = New Collection
     Set Cases = New Collection
@@ -262,7 +263,7 @@ Private Function FormatValue(v As Variant) As String
     End If
 End Function
 
-Public Function ToJSON(Optional indent As Long = 0) As String
+Public Function ToJSON(Optional Indent As Long = 0) As String
     Dim json As String
     Dim spaces As String
     Dim nextIndent As String
@@ -270,8 +271,8 @@ Public Function ToJSON(Optional indent As Long = 0) As String
     Dim myProp As CNode
      
     ' Create indentation strings
-    spaces = Space$(indent)
-    nextIndent = Space$(indent + 2)
+    spaces = Space$(Indent)
+    nextIndent = Space$(Indent + 2)
     
     ' Handle Nothing case
     If Me Is Nothing Then
@@ -289,7 +290,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                 For i = 1 To Body.count
                     Dim stmt As CNode
                     Set stmt = Body(i)
-                    json = json & stmt.ToJSON(indent + 4)
+                    json = json & stmt.ToJSON(Indent + 4)
                     If i < Body.count Then json = json & ","
                     json = json & vbCrLf
                 Next i
@@ -307,7 +308,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
         Case Literal_Node
             json = spaces & "{" & vbCrLf
             json = json & nextIndent & """type"": ""Literal""," & vbCrLf
-            json = json & nextIndent & """value"": " & FormatLiteralValue(Value) & "," & vbCrLf
+            json = json & nextIndent & """value"": " & FormatLiteralValue(value) & "," & vbCrLf
             json = json & nextIndent & """raw"": """ & EscapeJSON(Raw) & """" & vbCrLf
             json = json & spaces & "}"
             
@@ -333,14 +334,14 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             
             ' Parameters
             json = json & nextIndent & """params"": ["
-            If Not params Is Nothing Then
-                If params.count > 0 Then
+            If Not Params Is Nothing Then
+                If Params.count > 0 Then
                     json = json & vbCrLf
-                    For i = 1 To params.count
+                    For i = 1 To Params.count
                         Dim param As CNode
-                        Set param = params(i)
-                        json = json & param.ToJSON(indent + 4)
-                        If i < params.count Then json = json & ","
+                        Set param = Params(i)
+                        json = json & param.ToJSON(Indent + 4)
+                        If i < Params.count Then json = json & ","
                         json = json & vbCrLf
                     Next i
                     json = json & nextIndent
@@ -351,7 +352,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             ' Body
             json = json & nextIndent & """body"": "
             If Not FunctionBody Is Nothing Then
-                json = json & FunctionBody.ToJSON(indent + 2)
+                json = json & FunctionBody.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -368,7 +369,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                     json = json & vbCrLf
                     For i = 1 To Body.count
                         Set stmt = Body(i)
-                        json = json & stmt.ToJSON(indent + 4)
+                        json = json & stmt.ToJSON(Indent + 4)
                         If i < Body.count Then json = json & ","
                         json = json & vbCrLf
                     Next i
@@ -384,7 +385,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""ExpressionStatement""," & vbCrLf
             json = json & nextIndent & """expression"": "
             If Not Test Is Nothing Then  ' ? Change Expression to Test
-                json = json & Test.ToJSON(indent + 2)  ' ? Change Expression to Test
+                json = json & Test.ToJSON(Indent + 2)  ' ? Change Expression to Test
             Else
                 json = json & "null"
             End If
@@ -402,7 +403,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                     For i = 1 To Declarations.count
                         Dim decl As CNode
                         Set decl = Declarations(i)
-                        json = json & decl.ToJSON(indent + 4)
+                        json = json & decl.ToJSON(Indent + 4)
                         If i < Declarations.count Then json = json & ","
                         json = json & vbCrLf
                     Next i
@@ -425,8 +426,8 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """init"": "
-            If Not init Is Nothing Then
-                json = json & init.ToJSON(indent + 2)
+            If Not Init Is Nothing Then
+                json = json & Init.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -436,17 +437,17 @@ Public Function ToJSON(Optional indent As Long = 0) As String
         Case BinaryExpression_Node
             json = spaces & "{" & vbCrLf
             json = json & nextIndent & """type"": ""BinaryExpression""," & vbCrLf
-            json = json & nextIndent & """operator"": """ & EscapeJSON(Operator) & """," & vbCrLf
+            json = json & nextIndent & """operator"": """ & EscapeJSON(operator) & """," & vbCrLf
             json = json & nextIndent & """left"": "
             If Not Left Is Nothing Then
-                json = json & Left.ToJSON(indent + 2)
+                json = json & Left.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """right"": "
             If Not Right Is Nothing Then
-                json = json & Right.ToJSON(indent + 2)
+                json = json & Right.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -456,17 +457,17 @@ Public Function ToJSON(Optional indent As Long = 0) As String
         Case LogicalExpression_Node
             json = spaces & "{" & vbCrLf
             json = json & nextIndent & """type"": ""LogicalExpression""," & vbCrLf
-            json = json & nextIndent & """operator"": """ & EscapeJSON(Operator) & """," & vbCrLf
+            json = json & nextIndent & """operator"": """ & EscapeJSON(operator) & """," & vbCrLf
             json = json & nextIndent & """left"": "
             If Not Left Is Nothing Then
-                json = json & Left.ToJSON(indent + 2)
+                json = json & Left.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """right"": "
             If Not Right Is Nothing Then
-                json = json & Right.ToJSON(indent + 2)
+                json = json & Right.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -476,17 +477,17 @@ Public Function ToJSON(Optional indent As Long = 0) As String
         Case AssignmentExpression_Node
             json = spaces & "{" & vbCrLf
             json = json & nextIndent & """type"": ""AssignmentExpression""," & vbCrLf
-            json = json & nextIndent & """operator"": """ & EscapeJSON(Operator) & """," & vbCrLf
+            json = json & nextIndent & """operator"": """ & EscapeJSON(operator) & """," & vbCrLf
             json = json & nextIndent & """left"": "
             If Not Left Is Nothing Then
-                json = json & Left.ToJSON(indent + 2)
+                json = json & Left.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """right"": "
             If Not Right Is Nothing Then
-                json = json & Right.ToJSON(indent + 2)
+                json = json & Right.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -496,11 +497,11 @@ Public Function ToJSON(Optional indent As Long = 0) As String
         Case UnaryExpression_Node
             json = spaces & "{" & vbCrLf
             json = json & nextIndent & """type"": ""UnaryExpression""," & vbCrLf
-            json = json & nextIndent & """operator"": """ & EscapeJSON(Operator) & """," & vbCrLf
+            json = json & nextIndent & """operator"": """ & EscapeJSON(operator) & """," & vbCrLf
             json = json & nextIndent & """prefix"": " & IIf(Prefix, "true", "false") & "," & vbCrLf
             json = json & nextIndent & """argument"": "
             If Not Argument Is Nothing Then
-                json = json & Argument.ToJSON(indent + 2)
+                json = json & Argument.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -510,11 +511,11 @@ Public Function ToJSON(Optional indent As Long = 0) As String
         Case UpdateExpression_Node
             json = spaces & "{" & vbCrLf
             json = json & nextIndent & """type"": ""UpdateExpression""," & vbCrLf
-            json = json & nextIndent & """operator"": """ & EscapeJSON(Operator) & """," & vbCrLf
+            json = json & nextIndent & """operator"": """ & EscapeJSON(operator) & """," & vbCrLf
             json = json & nextIndent & """prefix"": " & IIf(Prefix, "true", "false") & "," & vbCrLf
             json = json & nextIndent & """argument"": "
             If Not Argument Is Nothing Then
-                json = json & Argument.ToJSON(indent + 2)
+                json = json & Argument.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -526,21 +527,21 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""ConditionalExpression""," & vbCrLf
             json = json & nextIndent & """test"": "
             If Not Test Is Nothing Then
-                json = json & Test.ToJSON(indent + 2)
+                json = json & Test.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """consequent"": "
             If Not Consequent Is Nothing Then
-                json = json & Consequent.ToJSON(indent + 2)
+                json = json & Consequent.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """alternate"": "
             If Not Alternate Is Nothing Then
-                json = json & Alternate.ToJSON(indent + 2)
+                json = json & Alternate.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -552,7 +553,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""CallExpression""," & vbCrLf
             json = json & nextIndent & """callee"": "
             If Not Callee Is Nothing Then
-                json = json & Callee.ToJSON(indent + 2)
+                json = json & Callee.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -565,7 +566,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                     For i = 1 To Arguments.count
                         Dim arg As CNode
                         Set arg = Arguments(i)
-                        json = json & arg.ToJSON(indent + 4)
+                        json = json & arg.ToJSON(Indent + 4)
                         If i < Arguments.count Then json = json & ","
                         json = json & vbCrLf
                     Next i
@@ -581,7 +582,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""NewExpression""," & vbCrLf
             json = json & nextIndent & """callee"": "
             If Not Callee Is Nothing Then
-                json = json & Callee.ToJSON(indent + 2)
+                json = json & Callee.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -593,7 +594,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                     json = json & vbCrLf
                     For i = 1 To Arguments.count
                         Set arg = Arguments(i)
-                        json = json & arg.ToJSON(indent + 4)
+                        json = json & arg.ToJSON(Indent + 4)
                         If i < Arguments.count Then json = json & ","
                         json = json & vbCrLf
                     Next i
@@ -610,14 +611,14 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""MemberExpression""," & vbCrLf
             json = json & nextIndent & """object"": "
             If Not Object Is Nothing Then
-                json = json & Object.ToJSON(indent + 2)
+                json = json & Object.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """property"": "
             If Not prop Is Nothing Then
-                json = json & prop.ToJSON(indent + 2)
+                json = json & prop.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -637,9 +638,9 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                         Dim elem As CNode
                         Set elem = Body(i)
                         If elem Is Nothing Then
-                            json = json & Space$(indent + 4) & "null"
+                            json = json & Space$(Indent + 4) & "null"
                         Else
-                            json = json & elem.ToJSON(indent + 4)
+                            json = json & elem.ToJSON(Indent + 4)
                         End If
                         If i < Body.count Then json = json & ","
                         json = json & vbCrLf
@@ -661,7 +662,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                     json = json & vbCrLf
                     For i = 1 To Properties.count
                         Set myProp = Properties(i)
-                        json = json & myProp.ToJSON(indent + 4)
+                        json = json & myProp.ToJSON(Indent + 4)
                         If i < Properties.count Then json = json & ","
                         json = json & vbCrLf
                     Next i
@@ -677,14 +678,14 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""Property""," & vbCrLf
             json = json & nextIndent & """key"": "
             If Not PropKey Is Nothing Then
-                json = json & PropKey.ToJSON(indent + 2)
+                json = json & PropKey.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """value"": "
             If Not propValue Is Nothing Then
-                json = json & propValue.ToJSON(indent + 2)
+                json = json & propValue.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -708,7 +709,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                     For i = 1 To Expressions.count
                         Dim expr As CNode
                         Set expr = Expressions(i)
-                        json = json & expr.ToJSON(indent + 4)
+                        json = json & expr.ToJSON(Indent + 4)
                         If i < Expressions.count Then json = json & ","
                         json = json & vbCrLf
                     Next i
@@ -724,21 +725,21 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""IfStatement""," & vbCrLf
             json = json & nextIndent & """test"": "
             If Not IfTest Is Nothing Then
-                json = json & IfTest.ToJSON(indent + 2)
+                json = json & IfTest.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """consequent"": "
             If Not IfConsequent Is Nothing Then
-                json = json & IfConsequent.ToJSON(indent + 2)
+                json = json & IfConsequent.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """alternate"": "
             If Not IfAlternate Is Nothing Then
-                json = json & IfAlternate.ToJSON(indent + 2)
+                json = json & IfAlternate.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -750,14 +751,14 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""WhileStatement""," & vbCrLf
             json = json & nextIndent & """test"": "
             If Not WhileTest Is Nothing Then
-                json = json & WhileTest.ToJSON(indent + 2)
+                json = json & WhileTest.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """body"": "
             If Not WhileBody Is Nothing Then
-                json = json & WhileBody.ToJSON(indent + 2)
+                json = json & WhileBody.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -769,14 +770,14 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""DoWhileStatement""," & vbCrLf
             json = json & nextIndent & """body"": "
             If Not WhileBody Is Nothing Then
-                json = json & WhileBody.ToJSON(indent + 2)
+                json = json & WhileBody.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """test"": "
             If Not WhileTest Is Nothing Then
-                json = json & WhileTest.ToJSON(indent + 2)
+                json = json & WhileTest.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -788,28 +789,28 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""ForStatement""," & vbCrLf
             json = json & nextIndent & """init"": "
             If Not ForInit Is Nothing Then
-                json = json & ForInit.ToJSON(indent + 2)
+                json = json & ForInit.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """test"": "
             If Not ForTest Is Nothing Then
-                json = json & ForTest.ToJSON(indent + 2)
+                json = json & ForTest.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """update"": "
             If Not ForUpdate Is Nothing Then
-                json = json & ForUpdate.ToJSON(indent + 2)
+                json = json & ForUpdate.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """body"": "
             If Not ForBody Is Nothing Then
-                json = json & ForBody.ToJSON(indent + 2)
+                json = json & ForBody.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -821,21 +822,21 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""ForInStatement""," & vbCrLf
             json = json & nextIndent & """left"": "
             If Not Left Is Nothing Then
-                json = json & Left.ToJSON(indent + 2)
+                json = json & Left.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """right"": "
             If Not Right Is Nothing Then
-                json = json & Right.ToJSON(indent + 2)
+                json = json & Right.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """body"": "
             If Not ForBody Is Nothing Then
-                json = json & ForBody.ToJSON(indent + 2)
+                json = json & ForBody.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -847,7 +848,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""ReturnStatement""," & vbCrLf
             json = json & nextIndent & """argument"": "
             If Not ReturnArgument Is Nothing Then
-                json = json & ReturnArgument.ToJSON(indent + 2)
+                json = json & ReturnArgument.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -871,7 +872,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""ThrowStatement""," & vbCrLf
             json = json & nextIndent & """argument"": "
             If Not ReturnArgument Is Nothing Then
-                json = json & ReturnArgument.ToJSON(indent + 2)
+                json = json & ReturnArgument.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -883,21 +884,21 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""TryStatement""," & vbCrLf
             json = json & nextIndent & """block"": "
             If Not TryBlock Is Nothing Then
-                json = json & TryBlock.ToJSON(indent + 2)
+                json = json & TryBlock.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """handler"": "
             If Not TryHandler Is Nothing Then
-                json = json & TryHandler.ToJSON(indent + 2)
+                json = json & TryHandler.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """finalizer"": "
             If Not TryFinalizer Is Nothing Then
-                json = json & TryFinalizer.ToJSON(indent + 2)
+                json = json & TryFinalizer.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -909,14 +910,14 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""CatchClause""," & vbCrLf
             json = json & nextIndent & """param"": "
             If Not param Is Nothing Then
-                json = json & param.ToJSON(indent + 2)
+                json = json & param.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
             json = json & "," & vbCrLf
             json = json & nextIndent & """body"": "
             If Not CatchBody Is Nothing Then
-                json = json & CatchBody.ToJSON(indent + 2)
+                json = json & CatchBody.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -928,7 +929,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""SwitchStatement""," & vbCrLf
             json = json & nextIndent & """discriminant"": "
             If Not discriminant Is Nothing Then
-                json = json & discriminant.ToJSON(indent + 2)
+                json = json & discriminant.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -941,7 +942,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                     For i = 1 To Cases.count
                         Dim caseNode As CNode
                         Set caseNode = Cases(i)
-                        json = json & caseNode.ToJSON(indent + 4)
+                        json = json & caseNode.ToJSON(Indent + 4)
                         If i < Cases.count Then json = json & ","
                         json = json & vbCrLf
                     Next i
@@ -957,7 +958,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""SwitchCase""," & vbCrLf
             json = json & nextIndent & """test"": "
             If Not CaseTest Is Nothing Then
-                json = json & CaseTest.ToJSON(indent + 2)
+                json = json & CaseTest.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -969,7 +970,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
                     json = json & vbCrLf
                     For i = 1 To CaseConsequent.count
                         Set stmt = CaseConsequent(i)
-                        json = json & stmt.ToJSON(indent + 4)
+                        json = json & stmt.ToJSON(Indent + 4)
                         If i < CaseConsequent.count Then json = json & ","
                         json = json & vbCrLf
                     Next i
@@ -990,7 +991,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             json = json & nextIndent & """type"": ""WithStatement""," & vbCrLf
             json = json & nextIndent & """object"": "
             If Not Object Is Nothing Then
-                json = json & Object.ToJSON(indent + 2)
+                json = json & Object.ToJSON(Indent + 2)
             Else
                 json = json & "null"
             End If
@@ -999,7 +1000,7 @@ Public Function ToJSON(Optional indent As Long = 0) As String
             If Not Body Is Nothing Then
                 If Body.count > 0 Then
                     Set stmt = Body(1)
-                    json = json & stmt.ToJSON(indent + 2)
+                    json = json & stmt.ToJSON(Indent + 2)
                 Else
                     json = json & "null"
                 End If

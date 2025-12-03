@@ -18,8 +18,9 @@ license: MIT
 
 have fun
 
-author (well conductor): David Zimmer <dzzie@yahoo.com> + claude.ai
-site:  http://sandsprite.com
+author: David Zimmer <dzzie@yahoo.com>
+AI:     claude.ai
+site:   http://sandsprite.com
 
 Contributors: yokesee - Date handling
 

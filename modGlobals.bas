@@ -1,5 +1,6 @@
 Attribute VB_Name = "modGlobals"
-'Author:  David Zimmer <dzzie@yahoo.com> + Claude.ai
+'Author:  David Zimmer <dzzie@yahoo.com>
+'AI:      Claude.ai
 'Site:    http://sandsprite.com
 'License: MIT
 
@@ -16,7 +17,7 @@ Public Declare Function DispCallFunc Lib "oleaut32.dll" ( _
     ByRef paValues As Long, ByRef ret As Variant) As Long
     
 Public Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
-    Destination As Any, source As Any, ByVal length As Long)
+    Destination As Any, Source As Any, ByVal length As Long)
 
 Public Declare Function CreateProxyForProgIDRaw Lib "dynproxy.dll" (ByVal progId As Long, ByVal resolverDisp As Long) As Long
 Public Declare Function CreateProxyForObjectRaw Lib "dynproxy.dll" (ByVal innerDispPtr As Long, ByVal resolverDispPtr As Long) As Long
@@ -50,14 +51,14 @@ Public hLibDynProxy As Long
 
 
 
-Sub push(ary, Value) 'this modifies parent ary object
-    On Error GoTo init
+Sub push(ary, value) 'this modifies parent ary object
+    On Error GoTo Init
     Dim X As Long
     X = UBound(ary) '<-throws Error If Not initalized
     ReDim Preserve ary(UBound(ary) + 1)
-    ary(UBound(ary)) = Value
+    ary(UBound(ary)) = value
     Exit Sub
-init:     ReDim ary(0): ary(0) = Value
+Init:     ReDim ary(0): ary(0) = value
 End Sub
 
 Function AryIsEmpty(ary) As Boolean
