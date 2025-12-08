@@ -2983,6 +2983,14 @@ Private Function CallCOMMethod(comObj As Object, methodName As String, args As C
         hr = CallByNameEx(comObj, methodName, DISPATCH_METHOD, vArgs, resultVar, isObj)
     End If
     
+    'RAISE ERROR ON FAILURE - this is better than undefined i think
+    If hr <> 0 Then
+        Dim errMsg As String
+        errMsg = "COM call failed: " & TypeName(comObj) & "." & methodName & _
+                 " (hr=0x" & hex(hr) & ")"
+        Err.Raise vbObjectError + 5000, "CallCOMMethod", errMsg
+    End If
+    
     ' Convert result to CValue
     Dim result As New CValue
     
@@ -3007,9 +3015,11 @@ Private Function CallCOMMethod(comObj As Object, methodName As String, args As C
     Exit Function
     
 ErrorHandler:
-    Dim undef As New CValue
-    undef.vType = vtUndefined
-    Set CallCOMMethod = undef
+    'Dim undef As New CValue
+    'undef.vType = vtUndefined
+    'Set CallCOMMethod = undef
+    'Re-raise for proper stack trace
+    Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
 'this brute force technique can call functions twice!
