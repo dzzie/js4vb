@@ -61,7 +61,7 @@ Dim hLib As Long
 Private Declare Function LoadLibrary Lib "kernel32" Alias "LoadLibraryA" (ByVal lpLibFileName As String) As Long
 
 'unsigned math operations
-Private Declare Function U64 Lib "utypes.dll" (ByVal v1 As Currency, ByVal v2 As Currency, ByVal operation As op) As Currency
+Private Declare Function u64 Lib "utypes.dll" Alias "U64" (ByVal v1 As Currency, ByVal v2 As Currency, ByVal operation As op) As Currency
 
 'signed math for 64 bit numbers (necessary?)
 Private Declare Function S64 Lib "utypes.dll" (ByVal v1 As Currency, ByVal v2 As Currency, ByVal operation As op) As Currency
@@ -101,6 +101,25 @@ Property Let value(v)
     End If
 
 End Property
+
+Public Function Is32BitSafeEx(Optional isUnsigned As Boolean = True) As Boolean
+    Dim hi As Long, lo As Long
+    GetLongs hi, lo
+    
+    If isUnsigned Then
+        ' Unsigned: hi must be 0, lo must not have sign bit set
+        Is32BitSafeEx = (hi = 0) And (lo >= 0)
+    Else
+        ' Signed: positive in range, or proper sign extension for negative
+        If hi = 0 And lo >= 0 Then
+            Is32BitSafeEx = True
+        ElseIf hi = -1 And lo < 0 Then
+            Is32BitSafeEx = True
+        Else
+            Is32BitSafeEx = False
+        End If
+    End If
+End Function
 
 'this way you can .setval(x).add(y)
 Function setVal(v) As ULong64
@@ -234,7 +253,7 @@ Function raw_op(operand2, operation As op) As ULong64
     If mode = mSigned Then
         ret.rawValue = S64(rawValue, tmp.rawValue, operation)
     Else
-        ret.rawValue = U64(rawValue, tmp.rawValue, operation)
+        ret.rawValue = u64(rawValue, tmp.rawValue, operation)
     End If
     
     ret.mode = Me.mode

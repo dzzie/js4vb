@@ -8,7 +8,7 @@ BEGIN
 END
 Attribute VB_Name = "CValue"
 Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = False
+Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 'Author:  David Zimmer <dzzie@yahoo.com>
@@ -64,6 +64,39 @@ Public Function ArrayLength() As Long
     Else
         ArrayLength = 0
     End If
+End Function
+
+Public Function LoadNumFromStr(v As Variant, Optional isUnsigned As Boolean = True) As ValueType
+    Dim sVal As String
+    Dim U64 As New ULong64
+    
+    On Error GoTo errHandler
+    
+    If VarType(v) = vbString Then
+        sVal = Trim$(v)
+    ElseIf IsNumeric(v) Then
+        sVal = CStr(v)
+    Else
+        GoTo errHandler
+    End If
+    
+    If Len(sVal) = 0 Then GoTo errHandler
+    If Not U64.fromString(sVal, mUnsigned) Then GoTo errHandler
+    
+    If U64.Is32BitSafeEx(isUnsigned) Then
+        vType = vtNumber
+        numVal = CDbl(U64.lo)
+    Else
+        vType = vtInt64
+        int64Val = U64.rawValue
+    End If
+    
+    LoadNumFromStr = vType
+    Exit Function
+    
+errHandler:
+    vType = vtUndefined
+    LoadNumFromStr = vType
 End Function
 
 'this is the default method of the class
