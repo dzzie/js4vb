@@ -1,12 +1,12 @@
 Type=Exe
 Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#C:\Windows\SysWOW64\stdole2.tlb#OLE Automation
-Reference=*\G{DEE7F987-FF3F-4139-A87E-DBDAD255B633}#1.0#0#..\..\..\js4vb\js4vb.dll#JS Engine For VB6 from Sandsprite.com
+Reference=*\G{DEE7F987-FF3F-4139-A87E-DBDAD255B633}#1.0#0#..\..\js4vb.dll#JS Engine For VB6 from Sandsprite.com
 Object={F9043C88-F6F2-101A-A3C9-08002B2F49FB}#1.2#0; COMDLG32.OCX
 Object={831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.0#0; MSCOMCTL.OCX
 UserControl=ucJSDebugger.ctl
 Form=frmDebugger.frm
 Class=CCachedObj; CCachedObj.cls
-Object={61ECB1F7-F440-419B-A75C-7EFDF0889185}#4.0#0; sci4vb.ocx
+Object={61ECB1F7-F440-419B-A75C-7EFDF0889185}#4.1#0; sci4vb.ocx
 Startup="frmDebugger"
 HelpFile=""
 Command32=""

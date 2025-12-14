@@ -1,5 +1,5 @@
 VERSION 5.00
-Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.2#0"; "MSCOMCTL.OCX"
+Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.0#0"; "MSCOMCTL.OCX"
 Object = "{2668C1EA-1D34-42E2-B89F-6B92F3FF627B}#5.0#0"; "scivb2.ocx"
 Begin VB.UserControl ucJSDebugger 
    ClientHeight    =   8400
@@ -616,7 +616,7 @@ End Sub
 ' ============================================
 
 Public Sub ToggleBreakpoint(Optional line As Long = -1)
-    If line = -1 Then line = scivb.CurrentLine
+    If line = -1 Then line = scivb.currentLine
     
     If HasBreakpointMarker(line) Then
         scivb.DeleteMarker line, 2
@@ -669,7 +669,7 @@ Private Sub UpdateUI()
     ClearCurrentLineMarker
     
     Dim curLine As Long
-    curLine = interp.CurrentLine - 1  ' 0-based for Scintilla
+    curLine = interp.currentLine - 1  ' 0-based for Scintilla
     
     'Debug.Print ">>> Setting markers on line: " & curLine  ' ADD THIS
     
@@ -687,7 +687,7 @@ Private Sub UpdateUI()
     
     ' Update status
     If interp.IsPaused Then
-        lblStatus.Caption = "Status: Paused at line " & interp.CurrentLine
+        lblStatus.Caption = "Status: Paused at line " & interp.currentLine
     End If
     
     DoEvents
@@ -711,60 +711,16 @@ Private Sub UpdateVariablesView()
     
     If interp Is Nothing Then Exit Sub
     
-    Dim vars As Collection
-    Set vars = interp.GetCurrentScopeVariables()
-    
-    Dim varInfo As String
-    Dim i As Long
-    For i = 1 To vars.Count
-        varInfo = vars(i)
-        ' Format: "varName = value (type)"
-        lstVariables.ListItems.Add , , ParseVarName(varInfo)
-        lstVariables.ListItems(i).SubItems(1) = ParseVarValue(varInfo)
-        lstVariables.ListItems(i).SubItems(2) = ParseVarType(varInfo)
-    Next
-End Sub
+    Dim vars As Collection, li As ListItem, vi As CVarItem
+    Set vars = interp.GetCurrentScopeVariables() 'of cvaritem
 
-' Add special handling for BigInt display
-Private Function ParseVarValue(varInfo As String) As String
-    Dim pos1 As Long, pos2 As Long
-    Dim value As String
+    For Each vi In vars
+        Set li = lstVariables.ListItems.Add(, , vi.Name)
+        li.SubItems(1) = vi.value.ToString()
+        li.SubItems(2) = vi.value.GetTypeName()
+    Next
     
-    pos1 = InStr(varInfo, " = ")
-    pos2 = InStr(varInfo, " (")
-    
-    If pos1 > 0 And pos2 > pos1 Then
-        value = Mid$(varInfo, pos1 + 3, pos2 - pos1 - 3)
-        
-        ' Format large hex addresses nicely for IDA
-        If Right$(value, 1) = "n" Then
-            ' It's a BigInt - could be an address
-            Dim numPart As String
-            numPart = Left$(value, Len(value) - 1)
-            
-            ' If it looks like a hex address (> 0x100000), format it
-            If IsNumeric(numPart) Then
-                Dim dblVal As Double
-                dblVal = CDbl(numPart)
-                
-                If dblVal > 1048576 Then  ' 0x100000
-                    ' Format as hex for readability
-                    Dim u64 As New ULong64
-                    u64.mode = mUnsigned
-                    u64.rawValue = dblVal
-                    u64.use0x = True
-                    u64.useTick = True  ' Use ` separator for readability
-                    ParseVarValue = u64.ToString(mHex) & "n (" & numPart & ")"
-                    Exit Function
-                End If
-            End If
-        End If
-        
-        ParseVarValue = value
-    Else
-        ParseVarValue = ""
-    End If
-End Function
+End Sub
 
 Private Sub UpdateCallStackView()
 
@@ -785,27 +741,6 @@ Private Sub UpdateCallStackView()
     
 End Sub
 
-' Helper parsers
-Private Function ParseVarName(varInfo As String) As String
-    Dim pos As Long
-    pos = InStr(varInfo, " = ")
-    If pos > 0 Then
-        ParseVarName = Left$(varInfo, pos - 1)
-    Else
-        ParseVarName = varInfo
-    End If
-End Function
-
-Private Function ParseVarType(varInfo As String) As String
-    Dim pos1 As Long, pos2 As Long
-    pos1 = InStr(varInfo, " (")
-    pos2 = InStrRev(varInfo, ")")
-    If pos1 > 0 And pos2 > pos1 Then
-        ParseVarType = Mid$(varInfo, pos1 + 2, pos2 - pos1 - 2)
-    Else
-        ParseVarType = ""
-    End If
-End Function
 
 Private Sub ParseCallStackItem(item As String, ByRef funcName As String, ByRef lineNum As String)
     ' Format: "functionName (line 123)"

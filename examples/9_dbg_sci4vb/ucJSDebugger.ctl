@@ -1,6 +1,6 @@
 VERSION 5.00
 Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.0#0"; "MSCOMCTL.OCX"
-Object = "{61ECB1F7-F440-419B-A75C-7EFDF0889185}#4.0#0"; "sci4vb.ocx"
+Object = "{61ECB1F7-F440-419B-A75C-7EFDF0889185}#4.1#0"; "sci4vb.ocx"
 Begin VB.UserControl ucJSDebugger 
    ClientHeight    =   8400
    ClientLeft      =   0
@@ -608,53 +608,21 @@ Private Sub UpdateVariablesView()
     If interp Is Nothing Then Exit Sub
     
     Dim vars As Collection
-    Set vars = interp.GetCurrentScopeVariables()
+    Set vars = interp.GetCurrentScopeVariables() 'of CVarItem
     
     If vars Is Nothing Then Exit Sub
     
-    Dim varInfo As String
+    Dim vi As CVarItem
     Dim i As Long
     Dim item As ListItem
     
-    For i = 1 To vars.Count
-        varInfo = vars(i)
-        Set item = lstVariables.ListItems.Add(, , ParseVarName(varInfo))
-        item.SubItems(1) = ParseVarValue(varInfo)
-        item.SubItems(2) = ParseVarType(varInfo)
-    Next i
+    For Each vi In vars
+        Set item = lstVariables.ListItems.Add(, , vi.Name)
+        item.SubItems(1) = vi.Value.ToString()
+        item.SubItems(2) = vi.Value.GetTypeName()
+    Next
+    
 End Sub
-
-Private Function ParseVarName(varInfo As String) As String
-    Dim pos As Long
-    pos = InStr(varInfo, " = ")
-    If pos > 0 Then
-        ParseVarName = Left$(varInfo, pos - 1)
-    Else
-        ParseVarName = varInfo
-    End If
-End Function
-
-Private Function ParseVarValue(varInfo As String) As String
-    Dim pos1 As Long, pos2 As Long
-    pos1 = InStr(varInfo, " = ")
-    pos2 = InStr(varInfo, " (")
-    If pos1 > 0 And pos2 > pos1 Then
-        ParseVarValue = Mid$(varInfo, pos1 + 3, pos2 - pos1 - 3)
-    Else
-        ParseVarValue = ""
-    End If
-End Function
-
-Private Function ParseVarType(varInfo As String) As String
-    Dim pos1 As Long, pos2 As Long
-    pos1 = InStr(varInfo, " (")
-    pos2 = InStrRev(varInfo, ")")
-    If pos1 > 0 And pos2 > pos1 Then
-        ParseVarType = Mid$(varInfo, pos1 + 2, pos2 - pos1 - 2)
-    Else
-        ParseVarType = ""
-    End If
-End Function
 
 Private Sub UpdateCallStackView()
     On Error Resume Next
@@ -853,9 +821,11 @@ Private Sub tbarDebug_ButtonClick(ByVal Button As MSComctlLib.Button)
         Case "Run"
             RunScript
         Case "Start Debugger"
+            scivb.doc.SetFocus
             If m_isRunning Then Continue Else StartDebugging
         Case "Break"
             If m_isRunning And Not interp Is Nothing Then
+                scivb.doc.SetFocus
                 interp.PauseExecution
                 lblStatus.Caption = "Status: Paused (manual break)"
                 UpdateUI

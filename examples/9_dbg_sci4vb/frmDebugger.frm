@@ -85,6 +85,14 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Option Explicit
 
+'if you want to see a more complete example check out:
+'   IDA JScript V3 source: https://sandsprite.com//blogs/index.php?uid=7&pid=361
+'
+' mouse over variable values while debugging
+' ability to run commands while debugging
+' var dumper that supports arrays and objects
+
+
 Dim last As String
 
 Private Sub cmdClear_Click()

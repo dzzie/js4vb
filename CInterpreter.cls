@@ -638,9 +638,9 @@ Public Function GetVariable(Name As String) As CValue
 End Function
 
 ' Set a JavaScript variable from VB6
-Public Sub SetVariable(Name As String, value As Variant)
+Public Sub SetVariable(Name As String, Value As Variant)
     Dim val As New CValue
-    Set val = VariantToCValue(value)
+    Set val = VariantToCValue(Value)
     m_globalScope.DefineVar Name, val
 End Sub
 
@@ -1167,18 +1167,18 @@ Private Sub ExecuteVarDeclaration(Node As CNode)
         If debug_mode Then Debug.Print ">>> Declaring var: " & varName  ' <-- ADD THIS
         
         ' Get initial value
-        Dim value As CValue
+        Dim Value As CValue
         If Not decl.Init Is Nothing Then
-            Set value = EvaluateExpression(decl.Init)
-            If debug_mode Then Debug.Print ">>> Init value type: " & value.vType  ' <-- ADD THIS
+            Set Value = EvaluateExpression(decl.Init)
+            If debug_mode Then Debug.Print ">>> Init value type: " & Value.vType  ' <-- ADD THIS
         Else
             ' No initializer - set to undefined
-            Set value = New CValue
-            value.vType = vtUndefined
+            Set Value = New CValue
+            Value.vType = vtUndefined
         End If
         
         ' Define in current scope
-        m_currentScope.DefineVar varName, value
+        m_currentScope.DefineVar varName, Value
         If debug_mode Then Debug.Print ">>> Defined successfully"  ' <-- ADD THIS
     Next
 End Sub
@@ -1415,15 +1415,15 @@ Private Function EvaluateLiteral(Node As CNode) As CValue
     Dim s As String
     Dim U64 As ULong64
     
-    If debug_mode Then Debug.Print ">>> EvaluateLiteral: VarType = " & VarType(Node.value) & ", Value = '" & Node.value & "'"
+    If debug_mode Then Debug.Print ">>> EvaluateLiteral: VarType = " & VarType(Node.Value) & ", Value = '" & Node.Value & "'"
  
-    If IsNull(Node.value) Then
+    If IsNull(Node.Value) Then
         result.vType = vtNull
-    ElseIf VarType(Node.value) = vbBoolean Then
+    ElseIf VarType(Node.Value) = vbBoolean Then
         result.vType = vtBoolean
-        result.boolVal = Node.value
-    ElseIf VarType(Node.value) = vbString Then
-        s = Node.value
+        result.boolVal = Node.Value
+    ElseIf VarType(Node.Value) = vbString Then
+        s = Node.Value
         
         ' Check for Int64 literal (ends with 'n' OR is a large hex number)
         Dim needsBigInt As Boolean
@@ -1482,13 +1482,13 @@ Private Function EvaluateLiteral(Node As CNode) As CValue
         Else
             ' Regular string
             result.vType = vtString
-            result.strVal = Node.value
+            result.strVal = Node.Value
         End If
         
-    ElseIf IsNumeric(Node.value) Then
+    ElseIf IsNumeric(Node.Value) Then
         ' Standard number
         result.vType = vtNumber
-        result.numVal = CDbl(Node.value)
+        result.numVal = CDbl(Node.Value)
     Else
         result.vType = vtUndefined
     End If
@@ -1680,7 +1680,7 @@ End Function
 ' Evaluate assignment
 ' Update EvaluateAssignment to handle member expressions:
 Private Function EvaluateAssignment(Node As CNode) As CValue
-    Dim value As CValue
+    Dim Value As CValue
     Dim currentValue As CValue
     Dim result As New CValue
     
@@ -1693,7 +1693,7 @@ Private Function EvaluateAssignment(Node As CNode) As CValue
     
     If operator = "" Or operator = "=" Then
         ' Simple assignment: x = value
-        Set value = EvaluateExpression(Node.Right)
+        Set Value = EvaluateExpression(Node.Right)
     Else
         ' Compound assignment: x += value, x -= value, etc.
         ' First get the current value of the left side
@@ -1751,7 +1751,7 @@ Private Function EvaluateAssignment(Node As CNode) As CValue
             End Select
             
             result.int64Val = EvaluateInt64Arithmetic(leftU64, rightU64, baseOp)
-            Set value = result
+            Set Value = result
             GoTo DoAssignment
         End If
         
@@ -1767,42 +1767,42 @@ Private Function EvaluateAssignment(Node As CNode) As CValue
                     result.vType = vtNumber
                     result.numVal = currentValue.ToNumber() + rightValue.ToNumber()
                 End If
-                Set value = result
+                Set Value = result
                 
             Case "-=":
                 result.vType = vtNumber
                 result.numVal = currentValue.ToNumber() - rightValue.ToNumber()
-                Set value = result
+                Set Value = result
                 
             Case "*=":
                 result.vType = vtNumber
                 result.numVal = currentValue.ToNumber() * rightValue.ToNumber()
-                Set value = result
+                Set Value = result
                 
             Case "/=":
                 result.vType = vtNumber
                 result.numVal = currentValue.ToNumber() / rightValue.ToNumber()
-                Set value = result
+                Set Value = result
                 
             Case "%=":
                 result.vType = vtNumber
                 result.numVal = currentValue.ToNumber() Mod rightValue.ToNumber()
-                Set value = result
+                Set Value = result
                 
             Case "&=":
                 result.vType = vtNumber
                 result.numVal = CLng(currentValue.ToNumber()) And CLng(rightValue.ToNumber())
-                Set value = result
+                Set Value = result
                 
             Case "|=":
                 result.vType = vtNumber
                 result.numVal = CLng(currentValue.ToNumber()) Or CLng(rightValue.ToNumber())
-                Set value = result
+                Set Value = result
                 
             Case "^=":
                 result.vType = vtNumber
                 result.numVal = CLng(currentValue.ToNumber()) Xor CLng(rightValue.ToNumber())
-                Set value = result
+                Set Value = result
                 
             Case "<<=":
                 result.vType = vtNumber
@@ -1811,7 +1811,7 @@ Private Function EvaluateAssignment(Node As CNode) As CValue
                 lshiftVal = CLng(currentValue.ToNumber())
                 lshiftAmt = CLng(rightValue.ToNumber()) And 31
                 result.numVal = lshiftVal * (2# ^ lshiftAmt)
-                Set value = result
+                Set Value = result
                 
             Case ">>=":
                 result.vType = vtNumber
@@ -1820,7 +1820,7 @@ Private Function EvaluateAssignment(Node As CNode) As CValue
                 rshiftVal = CLng(currentValue.ToNumber())
                 rshiftAmt = CLng(rightValue.ToNumber()) And 31
                 result.numVal = rshiftVal \ (2# ^ rshiftAmt)
-                Set value = result
+                Set Value = result
               
             Case ">>>=":
                 result.vType = vtNumber
@@ -1837,7 +1837,7 @@ Private Function EvaluateAssignment(Node As CNode) As CValue
                 End If
                 
                 result.numVal = Fix(unsignedVal2 / (2# ^ urshiftAmt2))
-                Set value = result
+                Set Value = result
                 
             Case Else:
                 Err.Raise vbObjectError + 1003, "CInterpreter", _
@@ -1848,16 +1848,16 @@ Private Function EvaluateAssignment(Node As CNode) As CValue
 DoAssignment:
     ' Perform the assignment
     If Node.Left.tType = Identifier_Node Then
-        m_currentScope.SetVar Node.Left.Name, value
+        m_currentScope.SetVar Node.Left.Name, Value
     ElseIf Node.Left.tType = MemberExpression_Node Then
         ' Member assignment: obj.prop = value or arr[0] = value
-        AssignMember Node.Left, value
+        AssignMember Node.Left, Value
     Else
         Err.Raise vbObjectError + 1003, "CInterpreter", _
                   "Invalid assignment target"
     End If
     
-    Set EvaluateAssignment = value
+    Set EvaluateAssignment = Value
 End Function
 
 Private Function EvaluateCall(Node As CNode) As CValue
@@ -2538,7 +2538,7 @@ Private Function EvaluateObjectExpression(Node As CNode) As CValue
         If prop.PropKey.tType = Identifier_Node Then
             key = prop.PropKey.Name
         ElseIf prop.PropKey.tType = Literal_Node Then
-            key = CStr(prop.PropKey.value)
+            key = CStr(prop.PropKey.Value)
         Else
             key = "unknown"
         End If
@@ -2561,7 +2561,7 @@ End Function
 
 
 ' Helper to assign to member
-Private Sub AssignMember(memberNode As CNode, value As CValue)
+Private Sub AssignMember(memberNode As CNode, Value As CValue)
     ' Evaluate the object
     Dim obj As CValue
     Set obj = EvaluateExpression(memberNode.Object)
@@ -2590,9 +2590,9 @@ Private Sub AssignMember(memberNode As CNode, value As CValue)
                 obj.arrayVal.Remove index + 1
                 ' After removing, check if we can insert before, or must append
                 If index < obj.arrayVal.count Then
-                    obj.arrayVal.add value, , index + 1  ' Insert before next element
+                    obj.arrayVal.add Value, , index + 1  ' Insert before next element
                 Else
-                    obj.arrayVal.add value  ' Append (was last element)
+                    obj.arrayVal.add Value  ' Append (was last element)
                 End If
             End If
             Exit Sub
@@ -2606,7 +2606,7 @@ Private Sub AssignMember(memberNode As CNode, value As CValue)
     
     ' === NEW: Handle COM objects ===
     If obj.vType = vtCOMObject Then
-        SetCOMProperty obj.objVal, propName, value
+        SetCOMProperty obj.objVal, propName, Value
         Exit Sub
     End If
     
@@ -2616,7 +2616,7 @@ Private Sub AssignMember(memberNode As CNode, value As CValue)
         obj.objectProps.Remove propName
         obj.objectKeys.Remove propName
         On Error GoTo 0
-        obj.objectProps.add value, propName
+        obj.objectProps.add Value, propName
         obj.objectKeys.add propName, propName
     End If
 End Sub
@@ -3213,7 +3213,7 @@ End Function
 '    On Error GoTo 0
 'End Sub
 
-Private Sub SetCOMProperty(comObj As Object, propName As String, value As CValue)
+Private Sub SetCOMProperty(comObj As Object, propName As String, Value As CValue)
     On Error Resume Next
     
     If Not ensureDynProxy() Then
@@ -3229,10 +3229,10 @@ Private Sub SetCOMProperty(comObj As Object, propName As String, value As CValue
     Dim invokeType As Integer
     
     ' Convert CValue to Variant
-    v = CValueToVariant(value)
+    v = CValueToVariant(Value)
     
     ' Determine if we're setting an object or a value
-    If value.vType = vtCOMObject Or value.vType = vtObject Then
+    If Value.vType = vtCOMObject Or Value.vType = vtObject Then
         invokeType = DISPATCH_PROPERTYPUTREF  ' Property Set
     Else
         invokeType = DISPATCH_PROPERTYPUT      ' Property Let
@@ -5487,6 +5487,30 @@ Public Function CallJSFunction(func As CValue, args As Collection, Optional this
             End If
         Next
     End If
+    
+    ' ADD: Create arguments object
+    Dim argsObj As New CValue
+    argsObj.vType = vtObject
+    Set argsObj.objectProps = New Collection
+    Set argsObj.objectKeys = New Collection
+    
+    ' Add length property
+    Dim lengthVal As New CValue
+    lengthVal.vType = vtNumber
+    lengthVal.numVal = args.count
+    argsObj.objectProps.add lengthVal, "length"
+    argsObj.objectKeys.add "length", "length"
+    
+    ' Add indexed properties (arguments[0], arguments[1], etc.)
+    For i = 1 To args.count
+        Dim idx As String
+        idx = CStr(i - 1)  ' 0-based
+        argsObj.objectProps.add args(i), idx
+        argsObj.objectKeys.add idx, idx
+    Next
+    
+    ' Add arguments to scope
+    funcScope.DefineVar "arguments", argsObj
     
     ' Save current state
     Dim oldScope As CScope
