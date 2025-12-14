@@ -92,6 +92,7 @@ Public Sub SetVar(Name As String, value As CValue)
         ' Not found anywhere - create in global scope (sloppy mode)
         ' This prevents infinite recursion
         m_vars.add value, Name
+        m_varNames.add Name, Name
     End If
 End Sub
 

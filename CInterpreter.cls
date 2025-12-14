@@ -160,6 +160,10 @@ Property Get GlobalScope() As CScope
     Set GlobalScope = m_globalScope
 End Property
 
+Property Get CurrentScope() As CScope
+    Set CurrentScope = m_currentScope
+End Property
+
 Sub Abort()
     m_AbortExec = True
     StopDebug
@@ -351,26 +355,26 @@ Public Function GetCurrentScopeVariables() As Collection
     If Not m_debugMode Then Exit Function
     
     ' Get the current scope (function scope or global)
-    Dim currentScope As CScope
+    Dim CurrentScope As CScope
     
     If m_callStack.count > 0 Then
         ' We're in a function - get the function's scope from top of stack
         Dim frame As CDebugCallFrame
         Set frame = m_callStack.Item(m_callStack.count)
-        Set currentScope = frame.scope
+        Set CurrentScope = frame.scope
     Else
         ' Global scope
-        Set currentScope = m_globalScope
+        Set CurrentScope = m_globalScope
     End If
     
-    If currentScope Is Nothing Then
-        Set currentScope = m_globalScope
+    If CurrentScope Is Nothing Then
+        Set CurrentScope = m_globalScope
     End If
     
-    If currentScope Is Nothing Then Exit Function
+    If CurrentScope Is Nothing Then Exit Function
     
     ' Use CScope's GetAllVariables method
-    Set GetCurrentScopeVariables = currentScope.GetAllVariables()
+    Set GetCurrentScopeVariables = CurrentScope.GetAllVariables()
 End Function
 
 ' ============================================
@@ -3678,7 +3682,7 @@ Private Function IsArrayMethod(methodName As String) As Boolean
              "join", "reverse", "sort", "concat", "indexOf", "lastIndexOf", _
              "includes", _
              "forEach", "map", "filter", "reduce", "find", "findIndex", _
-             "some", "every"
+             "some", "every", "toString"
             IsArrayMethod = True
         Case Else
             IsArrayMethod = False
@@ -3703,7 +3707,8 @@ Private Function CallArrayMethod(arr As Collection, methodName As String, args A
     Dim startIdx As Long
     Dim callbackArgs As Collection
     Dim indexVal As CValue
-    
+    Dim parts As String
+                
     Select Case methodName
         Case "push"
             ' Add elements to end
@@ -3722,6 +3727,18 @@ Private Function CallArrayMethod(arr As Collection, methodName As String, args A
                 result.vType = vtUndefined
             End If
             
+        Case "toString"
+            ' Join with commas
+            For i = 1 To arr.count
+                Dim elem As CValue
+                Set elem = arr(i)
+                If i > 1 Then parts = parts & ","
+                parts = parts & elem.ToString()
+            Next
+            
+            result.vType = vtString
+            result.strVal = parts
+    
         Case "shift"
             ' Remove and return first element
             If arr.count > 0 Then
