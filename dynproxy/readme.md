@@ -10,7 +10,7 @@ I cant really say i wrote it, I was just the chatgpt conductor.
 
 Author:   dzzie@yahoo.com + chatgpt
 Site:     http://sandsprite.com
-License:  none/public domain
+License:  MIT
 
 ---
 

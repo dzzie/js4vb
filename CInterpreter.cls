@@ -5721,6 +5721,9 @@ ErrorHandler:
     Set CallJSFunction = result
 End Function
 
+'this is a better name..
+'Public Function GetCOMProxy(code As String) As Object
+
 ' Evaluate JavaScript and return as VB COM object (if it's a JS object)
 Public Function EvalAsObject(code As String) As Object
     On Error GoTo ErrorHandler
