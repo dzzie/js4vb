@@ -147,6 +147,7 @@
   <ItemGroup>
     <ClCompile Include="dynproxy.cpp" />
     <ClCompile Include="typename.cpp" />
+    <ClCompile Include="UniversalEventSink.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dynproxy.h" />

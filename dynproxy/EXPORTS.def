@@ -10,3 +10,8 @@ EXPORTS
 	CallByNameEx
 	IPCDebugMode
 	StartDbgWnd
+	SinkEventsAuto
+    SinkEventsIID
+    SinkEventsDisconnect
+    SinkEventsGetIID
+    SinkEventsGetSourceName

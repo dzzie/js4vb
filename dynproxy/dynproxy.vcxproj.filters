@@ -21,6 +21,9 @@
     <ClCompile Include="typename.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UniversalEventSink.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dynproxy.h">

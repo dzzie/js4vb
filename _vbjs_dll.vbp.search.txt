@@ -1,3 +1,5 @@
+CallByNameEx
+comtypename
 hex
 cvaluetovariant
 filesize

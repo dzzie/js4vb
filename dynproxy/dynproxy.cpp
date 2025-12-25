@@ -80,6 +80,8 @@ int FindVBWindow() {
 
 }
 
+
+
 int msg(char* Buffer, int force=0) {
 
 	if (!DEBUG_MODE && force==0) return 0;
@@ -97,6 +99,10 @@ int msg(char* Buffer, int force=0) {
     int ret = SendMessage(hServer, WM_COPYDATA, 0, (LPARAM)&cpStructData);
     return ret; //log ui can send us a response msg to trigger special reaction in ret
 
+}
+
+int msg(const char* Buffer, int force = 0) {
+	return msg((char*)Buffer, force);
 }
 
 void msgf(const char* format, ...)
